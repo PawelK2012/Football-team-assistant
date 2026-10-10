@@ -42,27 +42,28 @@ def get_available_players() -> list:
 
 
 def get_goalkeeper_history() -> list:
-    """Get goalkeeper selections from previous matches."""
+    """Get goalkeeper selections from previous matches, newest first."""
 
     history = []
 
-    for entry in GOALKEEPER_HISTORY:
+    for entry in sorted(
+        GOALKEEPER_HISTORY,
+        key=lambda item: item["date"],
+        reverse=True,
+    ):
         player = next(
-            (
-                player
-                for player in PLAYERS
-                if player["id"] == entry["player_id"]
-            ),
-            None,
+            player
+            for player in PLAYERS
+            if player["id"] == entry["player_id"]
         )
 
-        if player:
-            history.append(
-                {
-                    "match": entry["match"],
-                    "player": player["name"],
-                }
-            )
+        history.append(
+            {
+                "date": entry["date"],
+                "player_id": player["id"],
+                "player": player["name"],
+            }
+        )
 
     return history
 
