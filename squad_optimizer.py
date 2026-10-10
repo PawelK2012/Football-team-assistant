@@ -1,6 +1,34 @@
 from itertools import combinations
 
 
+def has_goalkeeper(squad: list[dict]) -> bool:
+    return any(player["can_play_goalkeeper"] for player in squad)
+
+
+def select_goalkeeper(
+    squad: list[dict],
+    goalkeeper_history: list[dict],
+) -> dict:
+
+    eligible_players = [player for player in squad if player["can_play_goalkeeper"]]
+
+    if not eligible_players:
+        raise ValueError("Squad does not contain an eligible goalkeeper.")
+
+    appearances = {player["id"]: 0 for player in eligible_players}
+
+    for entry in goalkeeper_history:
+        player_id = entry["player_id"]
+
+        if player_id in appearances:
+            appearances[player_id] += 1
+
+    return min(
+        eligible_players,
+        key=lambda player: appearances[player["id"]],
+    )
+
+
 def average_rating(players: list[dict]) -> float:
     if not players:
         return 0.0
@@ -15,22 +43,17 @@ def validate_players(players: list[dict]) -> None:
         )
 
     if len(players) > 16:
-        raise ValueError(
-            f"Maximum supported squad size is 16. Got {len(players)}."
-        )
+        raise ValueError(f"Maximum supported squad size is 16. Got {len(players)}.")
 
     for player in players:
         rating = player["rating"]
 
         if not 1.0 <= rating <= 6.0:
-            raise ValueError(
-                f"Invalid rating for {player['name']}: {rating}"
-            )
+            raise ValueError(f"Invalid rating for {player['name']}: {rating}")
 
         if rating * 2 != int(rating * 2):
             raise ValueError(
-                f"Rating must use 0.5 increments: "
-                f"{player['name']} has {rating}"
+                f"Rating must use 0.5 increments: {player['name']} has {rating}"
             )
 
 
@@ -52,6 +75,7 @@ def calculate_balance_score(
 
 def create_balanced_squads(
     available_players: list[dict],
+    goalkeeper_history: list[dict],
 ) -> dict:
 
     validate_players(available_players)
@@ -78,16 +102,17 @@ def create_balanced_squads(
     ):
         squad_a = list(squad_a_tuple)
 
-        squad_a_ids = {
-            player["id"]
-            for player in squad_a
-        }
+        squad_a_ids = {player["id"] for player in squad_a}
 
         squad_b = [
-            player
-            for player in available_players
-            if player["id"] not in squad_a_ids
+            player for player in available_players if player["id"] not in squad_a_ids
         ]
+
+        if not has_goalkeeper(squad_a):
+            continue
+
+        if not has_goalkeeper(squad_b):
+            continue
 
         score = calculate_balance_score(
             squad_a,
@@ -116,45 +141,80 @@ def create_balanced_squads(
                 ),
             }
 
+    if best_result is None:
+        raise ValueError("Unable to create two squads with eligible goalkeepers.")
+
+    best_result["goalkeeper_a"] = select_goalkeeper(
+        best_result["squad_a"],
+        goalkeeper_history,
+    )
+
+    best_result["goalkeeper_b"] = select_goalkeeper(
+        best_result["squad_b"],
+        goalkeeper_history,
+    )
+
     return best_result
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     players = [
-        {"id": 1, "name": "Henry", "rating": 4.5},
-        {"id": 2, "name": "Jack", "rating": 5.5},
-        {"id": 3, "name": "Ben", "rating": 3.5},
-        {"id": 4, "name": "Milo", "rating": 5.0},
-        {"id": 5, "name": "Calum", "rating": 4.0},
-        {"id": 6, "name": "Aron", "rating": 3.0},
-        {"id": 7, "name": "Mason", "rating": 4.5},
-        {"id": 8, "name": "Liam", "rating": 4.0},
-        {"id": 9, "name": "Mateo", "rating": 3.5},
-        {"id": 10, "name": "Knox", "rating": 5.0},
-        {"id": 11, "name": "Leo", "rating": 4.5},
-        {"id": 12, "name": "Ethan", "rating": 3.0},
-        {"id": 13, "name": "Sidan", "rating": 5.5},
+        {"id": 1, "name": "Henry", "rating": 4.5, "can_play_goalkeeper": True},
+        {"id": 2, "name": "Jack", "rating": 5.5, "can_play_goalkeeper": True},
+        {"id": 3, "name": "Ben", "rating": 3.5, "can_play_goalkeeper": False},
+        {"id": 4, "name": "Milo", "rating": 5.0, "can_play_goalkeeper": True},
+        {"id": 5, "name": "Calum", "rating": 4.0, "can_play_goalkeeper": True},
+        {"id": 6, "name": "Aron", "rating": 3.0, "can_play_goalkeeper": False},
+        {"id": 7, "name": "Mason", "rating": 4.5, "can_play_goalkeeper": False},
+        {"id": 8, "name": "Liam", "rating": 4.0, "can_play_goalkeeper": True},
+        {"id": 9, "name": "Mateo", "rating": 3.5, "can_play_goalkeeper": False},
+        {"id": 10, "name": "Knox", "rating": 5.0, "can_play_goalkeeper": False},
+        {"id": 11, "name": "Leo", "rating": 4.5, "can_play_goalkeeper": False},
+        {"id": 12, "name": "Ethan", "rating": 3.0, "can_play_goalkeeper": True},
+        {"id": 13, "name": "Sidan", "rating": 5.5, "can_play_goalkeeper": False},
     ]
 
-    result = create_balanced_squads(players)
+    goalkeeper_history = [
+        {
+            "date": "2026-09-20",
+            "player_id": 1,
+        },
+        {
+            "date": "2026-09-20",
+            "player_id": 4,
+        },
+        {
+            "date": "2026-09-27",
+            "player_id": 2,
+        },
+        {
+            "date": "2026-09-27",
+            "player_id": 5,
+        },
+    ]
+
+    result = create_balanced_squads(players, goalkeeper_history)
 
     print("\nSquad A")
-    for player in result["squad_a"]:
-        print(f"  {player['name']}: {player['rating']}")
+for player in result["squad_a"]:
+    marker = ""
 
-    print(
-        f"Average: {result['average_rating_a']}"
-    )
+    if player["id"] == result["goalkeeper_a"]["id"]:
+        marker = " (GK)"
 
-    print("\nSquad B")
-    for player in result["squad_b"]:
-        print(f"  {player['name']}: {player['rating']}")
+    print(f"  {player['name']}: {player['rating']}{marker}")
 
-    print(
-        f"Average: {result['average_rating_b']}"
-    )
+print(f"Average: {result['average_rating_a']}")
 
-    print(
-        f"\nBalance difference: "
-        f"{result['balance_difference']}"
-    )
+print("\nSquad B")
+for player in result["squad_b"]:
+    marker = ""
+
+    if player["id"] == result["goalkeeper_b"]["id"]:
+        marker = " (GK)"
+
+    print(f"  {player['name']}: {player['rating']}{marker}")
+
+print(f"Average: {result['average_rating_b']}")
+
+print(f"\nBalance difference: {result['balance_difference']}")
