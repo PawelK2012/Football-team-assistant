@@ -2,43 +2,41 @@ import json
 
 from ollama import chat
 
+import data.goalkeeper_history as goalkeeper_history_data
+
+# -------------------------------------------------------------------
+# Data
+# -------------------------------------------------------------------
+import data.players as players_data
+from squad_optimizer import create_balanced_squads
 
 MODEL = "qwen3:8b"
 
 
 # -------------------------------------------------------------------
-# Data
-# -------------------------------------------------------------------
-
-PLAYERS = [
-    {"id": 1, "name": "Henry", "available": True},
-    {"id": 2, "name": "Jack", "available": True},
-    {"id": 3, "name": "Ben", "available": False},
-    {"id": 4, "name": "Milo", "available": True},
-    {"id": 5, "name": "Calum", "available": True},
-]
-
-
-GOALKEEPER_HISTORY = [
-    {"match": "Match 1", "player_id": 1},
-    {"match": "Match 1", "player_id": 4},
-    {"match": "Match 2", "player_id": 2},
-    {"match": "Match 2", "player_id": 5},
-]
-
-
-# -------------------------------------------------------------------
 # Tools
 # -------------------------------------------------------------------
+def create_match_squads() -> dict:
+    """
+    Create two balanced squads for the upcoming match.
+
+    Uses all available players, balances player ratings,
+    ensures both squads contain an eligible goalkeeper,
+    and rotates goalkeeper duty based on previous matches.
+    """
+
+    available_players = get_available_players()
+
+    return create_balanced_squads(
+        available_players,
+        goalkeeper_history_data.GOALKEEPER_HISTORY,
+    )
+
 
 def get_available_players() -> list:
     """Get all players available for the upcoming football match."""
 
-    return [
-        player
-        for player in PLAYERS
-        if player["available"]
-    ]
+    return [player for player in players_data.PLAYERS if player["available"]]
 
 
 def get_goalkeeper_history() -> list:
@@ -47,13 +45,13 @@ def get_goalkeeper_history() -> list:
     history = []
 
     for entry in sorted(
-        GOALKEEPER_HISTORY,
+        goalkeeper_history_data.GOALKEEPER_HISTORY,
         key=lambda item: item["date"],
         reverse=True,
     ):
         player = next(
             player
-            for player in PLAYERS
+            for player in players_data.PLAYERS
             if player["id"] == entry["player_id"]
         )
 
@@ -75,18 +73,20 @@ def get_goalkeeper_history() -> list:
 TOOLS = {
     "get_available_players": get_available_players,
     "get_goalkeeper_history": get_goalkeeper_history,
+    "create_match_squads": create_match_squads,
 }
 
 
 TOOL_DEFINITIONS = [
     get_available_players,
     get_goalkeeper_history,
+    create_match_squads,
 ]
-
 
 # -------------------------------------------------------------------
 # Agent
 # -------------------------------------------------------------------
+
 
 def run_agent(user_input: str) -> str:
 
@@ -96,7 +96,10 @@ def run_agent(user_input: str) -> str:
             "content": (
                 "You are a football team assistant helping a youth football coach. "
                 "Use the provided tools whenever team data is required. "
-                "Never invent player availability or goalkeeper history."
+                "Never invent player availability, ratings, goalkeeper history, "
+                "or squad selections. "
+                "When the coach asks you to create or select squads, use the "
+                "create_match_squads tool."
             ),
         },
         {
@@ -106,7 +109,6 @@ def run_agent(user_input: str) -> str:
     ]
 
     while True:
-
         response = chat(
             model=MODEL,
             messages=messages,
@@ -121,7 +123,6 @@ def run_agent(user_input: str) -> str:
 
         # Execute every tool requested by the model.
         for call in response.message.tool_calls:
-
             tool_name = call.function.name
             arguments = call.function.arguments
 
@@ -131,17 +132,13 @@ def run_agent(user_input: str) -> str:
             tool = TOOLS.get(tool_name)
 
             if tool is None:
-                result = {
-                    "error": f"Unknown tool: {tool_name}"
-                }
+                result = {"error": f"Unknown tool: {tool_name}"}
 
             else:
                 try:
                     result = tool(**arguments)
                 except Exception as error:
-                    result = {
-                        "error": str(error)
-                    }
+                    result = {"error": str(error)}
 
             print(f"[Tool] Result: {result}")
 
@@ -159,9 +156,7 @@ def run_agent(user_input: str) -> str:
 # -------------------------------------------------------------------
 
 if __name__ == "__main__":
-
     while True:
-
         user_input = input("\nCoach: ").strip()
 
         if user_input.lower() in {"exit", "quit"}:

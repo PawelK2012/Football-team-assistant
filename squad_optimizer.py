@@ -1,4 +1,8 @@
+from datetime import date
 from itertools import combinations
+
+import data.goalkeeper_history as goalkeeper_history_data
+import data.players as players_data
 
 
 def has_goalkeeper(squad: list[dict]) -> bool:
@@ -15,18 +19,36 @@ def select_goalkeeper(
     if not eligible_players:
         raise ValueError("Squad does not contain an eligible goalkeeper.")
 
-    appearances = {player["id"]: 0 for player in eligible_players}
+    stats = {}
 
-    for entry in goalkeeper_history:
-        player_id = entry["player_id"]
+    for player in eligible_players:
+        player_history = [
+            entry for entry in goalkeeper_history if entry["player_id"] == player["id"]
+        ]
 
-        if player_id in appearances:
-            appearances[player_id] += 1
+        appearances = len(player_history)
 
-    return min(
+        if player_history:
+            last_played = max(
+                date.fromisoformat(entry["date"]) for entry in player_history
+            )
+        else:
+            last_played = date.min
+
+        stats[player["id"]] = {
+            "appearances": appearances,
+            "last_played": last_played,
+        }
+
+    selected = min(
         eligible_players,
-        key=lambda player: appearances[player["id"]],
+        key=lambda player: (
+            stats[player["id"]]["appearances"],
+            stats[player["id"]]["last_played"],
+        ),
     )
+
+    return selected
 
 
 def average_rating(players: list[dict]) -> float:
@@ -118,8 +140,8 @@ def create_balanced_squads(
             squad_a,
             squad_b,
         )
-        print("\nChecking combination:")
-        print(f"score: {score} - best_score: {best_score}")
+        # print("\nChecking combination:")
+        # print(f"score: {score} - best_score: {best_score}")
         if score < best_score:
             print("Found new best squad!")
             best_score = score
@@ -158,63 +180,29 @@ def create_balanced_squads(
 
 
 if __name__ == "__main__":
-    players = [
-        {"id": 1, "name": "Henry", "rating": 4.5, "can_play_goalkeeper": True},
-        {"id": 2, "name": "Jack", "rating": 5.5, "can_play_goalkeeper": True},
-        {"id": 3, "name": "Ben", "rating": 3.5, "can_play_goalkeeper": False},
-        {"id": 4, "name": "Milo", "rating": 5.0, "can_play_goalkeeper": True},
-        {"id": 5, "name": "Calum", "rating": 4.0, "can_play_goalkeeper": True},
-        {"id": 6, "name": "Aron", "rating": 3.0, "can_play_goalkeeper": False},
-        {"id": 7, "name": "Mason", "rating": 4.5, "can_play_goalkeeper": False},
-        {"id": 8, "name": "Liam", "rating": 4.0, "can_play_goalkeeper": True},
-        {"id": 9, "name": "Mateo", "rating": 3.5, "can_play_goalkeeper": False},
-        {"id": 10, "name": "Knox", "rating": 5.0, "can_play_goalkeeper": False},
-        {"id": 11, "name": "Leo", "rating": 4.5, "can_play_goalkeeper": False},
-        {"id": 12, "name": "Ethan", "rating": 3.0, "can_play_goalkeeper": True},
-        {"id": 13, "name": "Sidan", "rating": 5.5, "can_play_goalkeeper": False},
-    ]
-
-    goalkeeper_history = [
-        {
-            "date": "2026-09-20",
-            "player_id": 1,
-        },
-        {
-            "date": "2026-09-20",
-            "player_id": 4,
-        },
-        {
-            "date": "2026-09-27",
-            "player_id": 2,
-        },
-        {
-            "date": "2026-09-27",
-            "player_id": 5,
-        },
-    ]
-
-    result = create_balanced_squads(players, goalkeeper_history)
+    
+    result = create_balanced_squads(players_data.PLAYERS, goalkeeper_history_data.GOALKEEPER_HISTORY)
 
     print("\nSquad A")
-for player in result["squad_a"]:
-    marker = ""
+    for player in result["squad_a"]:
+        marker = ""
 
-    if player["id"] == result["goalkeeper_a"]["id"]:
-        marker = " (GK)"
+        if player["id"] == result["goalkeeper_a"]["id"]:
+            marker = " (GK)"
 
-    print(f"  {player['name']}: {player['rating']}{marker}")
+        print(f"  {player['name']}: {player['rating']}{marker}")
 
-print(f"Average: {result['average_rating_a']}")
+    print(f"Average: {result['average_rating_a']}")
 
-print("\nSquad B")
-for player in result["squad_b"]:
-    marker = ""
+    print("\nSquad B")
+    for player in result["squad_b"]:
+        marker = ""
 
-    if player["id"] == result["goalkeeper_b"]["id"]:
-        marker = " (GK)"
+        if player["id"] == result["goalkeeper_b"]["id"]:
+            marker = " (GK)"
 
-    print(f"  {player['name']}: {player['rating']}{marker}")
+        print(f"  {player['name']}: {player['rating']}{marker}")
 
-print(f"Average: {result['average_rating_b']}")
+    print(f"Average: {result['average_rating_b']}")
 
-print(f"\nBalance difference: {result['balance_difference']}")
+    print(f"\nBalance difference: {result['balance_difference']}")
