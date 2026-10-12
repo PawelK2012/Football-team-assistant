@@ -45,3 +45,8 @@ get_available_players  get_goalkeeper_history
                        ▼
                 recommendation
 `````
+
+## Test
+
+> Coach: Who is available for the Raheny game? 
+> Coach: Create squads for that game.

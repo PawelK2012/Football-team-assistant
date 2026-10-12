@@ -1,5 +1,5 @@
 from agent import run_agent
-
+from state import state
 
 def main():
 
@@ -20,6 +20,7 @@ def main():
             continue
 
         answer = run_agent(user_input)
+        print(f"[State] {state}")
 
         print(f"\nAssistant: {answer}")
 

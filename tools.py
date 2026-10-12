@@ -4,8 +4,8 @@ from data import (
     GOALKEEPER_HISTORY,
     PLAYERS,
 )
-
 from squad_optimizer import create_balanced_squads
+from state import state
 
 
 def get_fixtures() -> list:
@@ -21,6 +21,8 @@ def get_available_players(fixture_id: int) -> list:
     Args:
         fixture_id: The ID of the fixture.
     """
+
+    state["current_fixture_id"] = fixture_id
 
     available_player_ids = {
         entry["player_id"]
@@ -67,12 +69,6 @@ def get_goalkeeper_history() -> list:
 
 
 def create_match_squads(fixture_id: int) -> dict:
-    """
-    Create two balanced squads for a specific fixture.
-
-    Args:
-        fixture_id: The ID of the fixture to create squads for.
-    """
 
     fixture = next(
         (
@@ -88,6 +84,8 @@ def create_match_squads(fixture_id: int) -> dict:
             f"Fixture {fixture_id} does not exist."
         )
 
+    state["current_fixture_id"] = fixture_id
+
     available_players = get_available_players(
         fixture_id
     )
@@ -101,7 +99,6 @@ def create_match_squads(fixture_id: int) -> dict:
         "fixture": fixture,
         **squads,
     }
-
 
 TOOLS = {
     "get_fixtures": get_fixtures,
