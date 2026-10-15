@@ -1,5 +1,31 @@
 ### Football team assistant
 
+## High level architecture 
+
+
+`````
+main.py
+   │
+   │ user interaction
+   ▼
+agent.py
+   │
+   │ LLM reasoning + tool execution
+   ▼
+tools.py
+   │
+   │ application capabilities
+   ▼
+squad_optimizer.py
+   │
+   │ deterministic business logic
+   ▼
+data.py
+     in-memory data
+`````
+## AI Agent flow
+Needs update
+
 `````
              "Who should be goalkeeper?"
                         │
@@ -19,3 +45,8 @@ get_available_players  get_goalkeeper_history
                        ▼
                 recommendation
 `````
+
+## Test
+
+> Coach: Who is available for the Raheny game? 
+> Coach: Create squads for that game.
