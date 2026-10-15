@@ -67,6 +67,20 @@ def get_goalkeeper_history() -> list:
 
     return history
 
+def create_current_match_squads() -> dict:
+    """
+    Create balanced squads for the fixture currently being worked on.
+    """
+
+    fixture_id = state["current_fixture_id"]
+
+    if fixture_id is None:
+        raise ValueError(
+            "No current fixture has been selected."
+        )
+
+    return create_match_squads(fixture_id)
+
 
 def create_match_squads(fixture_id: int) -> dict:
 
@@ -105,6 +119,7 @@ TOOLS = {
     "get_available_players": get_available_players,
     "get_goalkeeper_history": get_goalkeeper_history,
     "create_match_squads": create_match_squads,
+    "create_current_match_squads": create_current_match_squads,
 }
 
 
@@ -113,4 +128,5 @@ TOOL_DEFINITIONS = [
     get_available_players,
     get_goalkeeper_history,
     create_match_squads,
+    create_current_match_squads,
 ]

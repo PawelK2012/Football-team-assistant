@@ -37,6 +37,13 @@ they can play goalkeeper.
 If the coach asks to create squads for a named fixture, first resolve
 the fixture using get_fixtures, then call create_match_squads with
 the correct fixture ID.
+
+If the coach asks to create squads for "this game", "that game",
+"the current game", or does not specify a fixture, use
+create_current_match_squads if a fixture has already been selected.
+
+Use create_match_squads when the coach explicitly identifies a
+fixture by opponent, date, or fixture ID.
 """
 
 
