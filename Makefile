@@ -3,3 +3,6 @@ docker:
 
 tests: 
 	pytest -v
+
+integration:
+	pytest tests/integration -v

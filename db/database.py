@@ -13,13 +13,13 @@ load_dotenv(
     override=True,
 )
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
 
 def get_connection():
-    if not DATABASE_URL:
+    database_url = os.getenv("DATABASE_URL")
+
+    if not database_url:
         raise RuntimeError(
             "DATABASE_URL environment variable is not set."
         )
 
-    return psycopg.connect(DATABASE_URL)
+    return psycopg.connect(database_url)
