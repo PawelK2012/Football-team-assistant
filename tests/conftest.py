@@ -36,6 +36,15 @@ def configure_test_database():
 @pytest.fixture
 def clean_database():
     with get_connection() as connection:
+
+        database_name = connection.info.dbname
+
+        if not database_name.endswith("_test"):
+            raise RuntimeError(
+                f"Refusing to clean non-test database: "
+                f"{database_name}"
+            )
+
         with connection.cursor() as cursor:
             cursor.execute(
                 """
