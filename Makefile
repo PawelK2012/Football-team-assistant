@@ -1,8 +1,12 @@
-docker:
-	docker compose up -d
+UV := uv --config-file ./uv.toml
 
-tests: 
-	pytest -v
+.PHONY: install test run
 
-integration:
-	pytest tests/integration -v
+install:
+	$(UV) sync
+
+test:
+	$(UV) run pytest -v
+
+run:
+	$(UV) run python main.py
