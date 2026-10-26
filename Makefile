@@ -14,6 +14,9 @@ coverage:
 run:
 	$(UV) run python main.py
 
+server:
+	uvicorn api.app:app --reload
+
 lint:
 	$(UV) run ruff check .
 	$(UV) run ruff format --check .
