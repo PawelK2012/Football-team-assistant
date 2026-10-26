@@ -4,7 +4,6 @@ import pytest
 
 from db.database import get_connection
 
-
 TEST_DATABASE_URL = (
     "postgresql://football:football"
     "@localhost:5432/football_assistant_test"

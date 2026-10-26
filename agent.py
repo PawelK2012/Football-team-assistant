@@ -3,10 +3,9 @@ import json
 from ollama import chat
 
 from tools import (
-    TOOLS,
     TOOL_DEFINITIONS,
+    TOOLS,
 )
-
 
 MODEL = "qwen3:8b"
 

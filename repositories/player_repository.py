@@ -5,10 +5,9 @@ def get_available_players(
     fixture_id: int,
 ) -> list[dict]:
 
-    with get_connection() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
+    with get_connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
                 SELECT
                     p.id,
                     p.name,
@@ -21,10 +20,10 @@ def get_available_players(
                   AND a.available = TRUE
                 ORDER BY p.id
                 """,
-                (fixture_id,),
-            )
+            (fixture_id,),
+        )
 
-            rows = cursor.fetchall()
+        rows = cursor.fetchall()
 
     return [
         {

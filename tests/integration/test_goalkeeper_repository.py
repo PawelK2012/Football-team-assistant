@@ -1,5 +1,4 @@
 from db.database import get_connection
-
 from repositories.goalkeeper_repository import (
     get_goalkeeper_history,
 )
@@ -8,11 +7,10 @@ from repositories.goalkeeper_repository import (
 def test_get_goalkeeper_history(
     clean_database,
 ):
-    with get_connection() as connection:
-        with connection.cursor() as cursor:
+    with get_connection() as connection, connection.cursor() as cursor:
 
-            cursor.execute(
-                """
+        cursor.execute(
+            """
                 INSERT INTO players (
                     name,
                     rating,
@@ -25,12 +23,12 @@ def test_get_goalkeeper_history(
                 )
                 RETURNING id
                 """
-            )
+        )
 
-            player_id = cursor.fetchone()[0]
+        player_id = cursor.fetchone()[0]
 
-            cursor.execute(
-                """
+        cursor.execute(
+            """
                 INSERT INTO fixtures (
                     fixture_date,
                     opponent,
@@ -43,23 +41,23 @@ def test_get_goalkeeper_history(
                 )
                 RETURNING id
                 """
-            )
+        )
 
-            fixture_id = cursor.fetchone()[0]
+        fixture_id = cursor.fetchone()[0]
 
-            cursor.execute(
-                """
+        cursor.execute(
+            """
                 INSERT INTO goalkeeper_history (
                     fixture_id,
                     player_id
                 )
                 VALUES (%s, %s)
                 """,
-                (
-                    fixture_id,
-                    player_id,
-                ),
-            )
+            (
+                fixture_id,
+                player_id,
+            ),
+        )
 
     history = get_goalkeeper_history()
 

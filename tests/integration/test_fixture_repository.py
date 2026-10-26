@@ -1,16 +1,17 @@
 from db.database import get_connection
-
 from repositories.fixture_repository import (
     get_fixture,
     get_fixtures,
 )
+from repositories.player_repository import (
+    get_available_players,
+)
 
 
 def test_get_fixtures(clean_database):
-    with get_connection() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
+    with get_connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
                 INSERT INTO fixtures (
                     fixture_date,
                     opponent,
@@ -20,7 +21,7 @@ def test_get_fixtures(clean_database):
                     ('2026-10-11', 'Dunboyne AFC', FALSE),
                     ('2026-10-18', 'Raheny United', TRUE)
                 """
-            )
+        )
 
     fixtures = get_fixtures()
 
@@ -42,10 +43,9 @@ def test_get_fixtures(clean_database):
 
 
 def test_get_fixture(clean_database):
-    with get_connection() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
+    with get_connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
                 INSERT INTO fixtures (
                     fixture_date,
                     opponent,
@@ -58,9 +58,9 @@ def test_get_fixture(clean_database):
                 )
                 RETURNING id
                 """
-            )
+        )
 
-            fixture_id = cursor.fetchone()[0]
+        fixture_id = cursor.fetchone()[0]
 
     fixture = get_fixture(fixture_id)
 
@@ -79,21 +79,14 @@ def test_get_nonexistent_fixture_returns_none(
 
     assert fixture is None
 
-from db.database import get_connection
-
-from repositories.player_repository import (
-    get_available_players,
-)
-
 
 def test_get_available_players(
     clean_database,
 ):
-    with get_connection() as connection:
-        with connection.cursor() as cursor:
+    with get_connection() as connection, connection.cursor() as cursor:
 
-            cursor.execute(
-                """
+        cursor.execute(
+            """
                 INSERT INTO fixtures (
                     fixture_date,
                     opponent,
@@ -106,12 +99,12 @@ def test_get_available_players(
                 )
                 RETURNING id
                 """
-            )
+        )
 
-            fixture_id = cursor.fetchone()[0]
+        fixture_id = cursor.fetchone()[0]
 
-            cursor.execute(
-                """
+        cursor.execute(
+            """
                 INSERT INTO players (
                     name,
                     rating,
@@ -123,15 +116,15 @@ def test_get_available_players(
                     ('Ben', 3.5, FALSE)
                 RETURNING id
                 """
-            )
+        )
 
-            player_ids = [
-                row[0]
-                for row in cursor.fetchall()
-            ]
+        player_ids = [
+            row[0]
+            for row in cursor.fetchall()
+        ]
 
-            cursor.execute(
-                """
+        cursor.execute(
+            """
                 INSERT INTO availability (
                     fixture_id,
                     player_id,
@@ -142,15 +135,15 @@ def test_get_available_players(
                     (%s, %s, FALSE),
                     (%s, %s, TRUE)
                 """,
-                (
-                    fixture_id,
-                    player_ids[0],
-                    fixture_id,
-                    player_ids[1],
-                    fixture_id,
-                    player_ids[2],
-                ),
-            )
+            (
+                fixture_id,
+                player_ids[0],
+                fixture_id,
+                player_ids[1],
+                fixture_id,
+                player_ids[2],
+            ),
+        )
 
     players = get_available_players(
         fixture_id

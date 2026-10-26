@@ -1,14 +1,12 @@
 from db.database import get_connection
-
 from tools import create_match_squads
 
 
 def test_create_match_squads(clean_database):
-    with get_connection() as connection:
-        with connection.cursor() as cursor:
+    with get_connection() as connection, connection.cursor() as cursor:
 
-            cursor.execute(
-                """
+        cursor.execute(
+            """
                 INSERT INTO fixtures (
                     fixture_date,
                     opponent,
@@ -21,28 +19,28 @@ def test_create_match_squads(clean_database):
                 )
                 RETURNING id
                 """
-            )
+        )
 
-            fixture_id = cursor.fetchone()[0]
+        fixture_id = cursor.fetchone()[0]
 
-            players = [
-                ("P1", 6.0, True),
-                ("P2", 5.5, True),
-                ("P3", 5.0, False),
-                ("P4", 4.5, False),
-                ("P5", 4.0, False),
-                ("P6", 4.0, False),
-                ("P7", 3.5, False),
-                ("P8", 3.0, False),
-                ("P9", 2.5, False),
-                ("P10", 2.0, False),
-            ]
+        players = [
+            ("P1", 6.0, True),
+            ("P2", 5.5, True),
+            ("P3", 5.0, False),
+            ("P4", 4.5, False),
+            ("P5", 4.0, False),
+            ("P6", 4.0, False),
+            ("P7", 3.5, False),
+            ("P8", 3.0, False),
+            ("P9", 2.5, False),
+            ("P10", 2.0, False),
+        ]
 
-            player_ids = []
+        player_ids = []
 
-            for name, rating, goalkeeper in players:
-                cursor.execute(
-                    """
+        for name, rating, goalkeeper in players:
+            cursor.execute(
+                """
                     INSERT INTO players (
                         name,
                         rating,
@@ -51,20 +49,20 @@ def test_create_match_squads(clean_database):
                     VALUES (%s, %s, %s)
                     RETURNING id
                     """,
-                    (
-                        name,
-                        rating,
-                        goalkeeper,
-                    ),
-                )
+                (
+                    name,
+                    rating,
+                    goalkeeper,
+                ),
+            )
 
-                player_ids.append(
-                    cursor.fetchone()[0]
-                )
+            player_ids.append(
+                cursor.fetchone()[0]
+            )
 
-            for player_id in player_ids:
-                cursor.execute(
-                    """
+        for player_id in player_ids:
+            cursor.execute(
+                """
                     INSERT INTO availability (
                         fixture_id,
                         player_id,
@@ -72,11 +70,11 @@ def test_create_match_squads(clean_database):
                     )
                     VALUES (%s, %s, TRUE)
                     """,
-                    (
-                        fixture_id,
-                        player_id,
-                    ),
-                )
+                (
+                    fixture_id,
+                    player_id,
+                ),
+            )
 
     result = create_match_squads(
         fixture_id

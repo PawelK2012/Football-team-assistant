@@ -3,10 +3,9 @@ from db.database import get_connection
 
 def get_goalkeeper_history() -> list[dict]:
 
-    with get_connection() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
+    with get_connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
                 SELECT
                     f.fixture_date,
                     p.id,
@@ -18,9 +17,9 @@ def get_goalkeeper_history() -> list[dict]:
                     ON p.id = gh.player_id
                 ORDER BY f.fixture_date, p.id
                 """
-            )
+        )
 
-            rows = cursor.fetchall()
+        rows = cursor.fetchall()
 
     return [
         {
