@@ -8,6 +8,9 @@ install:
 test:
 	$(UV) run pytest -v
 
+coverage:
+	$(UV) run pytest --cov --cov-report=term-missing tests
+
 run:
 	$(UV) run python main.py
 
