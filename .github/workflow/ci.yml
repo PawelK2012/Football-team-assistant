@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Run unit tests
+        run: uv run --locked pytest -v tests/unit
+
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: football_assistant
+          POSTGRES_USER: football
+          POSTGRES_PASSWORD: football
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U football -d football_assistant"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://football:football@localhost:5432/football_assistant
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Initialize database
+        run: |
+          PGPASSWORD=football psql \
+            -h localhost \
+            -U football \
+            -d football_assistant \
+            -f db/init.sql
+
+      - name: Run integration tests
+        run: uv run --locked pytest -v tests/integration
