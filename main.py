@@ -1,13 +1,13 @@
 from agent import run_agent
 from state import state
 
+
 def main():
 
     print("Football Team Assistant")
     print("Type 'quit' to exit.")
 
     while True:
-
         user_input = input("\nCoach: ").strip()
 
         if user_input.lower() in {

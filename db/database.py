@@ -4,7 +4,6 @@ from pathlib import Path
 import psycopg
 from dotenv import load_dotenv
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = PROJECT_ROOT / ".env"
 
@@ -13,13 +12,11 @@ load_dotenv(
     override=True,
 )
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
 
 def get_connection():
-    if not DATABASE_URL:
-        raise RuntimeError(
-            "DATABASE_URL environment variable is not set."
-        )
+    database_url = os.getenv("DATABASE_URL")
 
-    return psycopg.connect(DATABASE_URL)
+    if not database_url:
+        raise RuntimeError("DATABASE_URL environment variable is not set.")
+
+    return psycopg.connect(database_url)

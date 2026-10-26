@@ -1,0 +1,47 @@
+[project]
+name = "football-team-assistant"
+version = "0.1.0"
+description = "AI agent that acts as a football team manager assistant"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ollama>=0.6,<1",
+    "psycopg[binary]>=3.2,<4",
+    "python-dotenv>=1.1,<2",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[dependency-groups]
+dev = [
+    "pytest>=8,<10",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "I",   # import sorting
+]
+
+[tool.coverage.run]
+source = [
+    "agent",
+    "db",
+    "repositories",
+    "squad_optimizer",
+    "state",
+    "tools",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
