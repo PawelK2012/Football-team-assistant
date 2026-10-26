@@ -15,19 +15,19 @@ jobs:
       postgres:
         image: postgres:18
         env:
-          POSTGRES_DB: football_assistant
+          POSTGRES_DB: football_assistant_test
           POSTGRES_USER: football
           POSTGRES_PASSWORD: football
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U football -d football_assistant"
+          --health-cmd "pg_isready -U football -d football_assistant_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
 
     env:
-      DATABASE_URL: postgresql://football:football@localhost:5432/football_assistant
+      DATABASE_URL: postgresql://football:football@localhost:5432/football_assistant_test
 
     steps:
       - name: Checkout
@@ -49,7 +49,7 @@ jobs:
           PGPASSWORD=football psql \
             -h localhost \
             -U football \
-            -d football_assistant \
+            -d football_assistant_test \
             -f db/init.sql
 
       - name: Run tests
