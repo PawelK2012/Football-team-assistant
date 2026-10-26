@@ -4,7 +4,6 @@ from tools import create_match_squads
 
 def test_create_match_squads(clean_database):
     with get_connection() as connection, connection.cursor() as cursor:
-
         cursor.execute(
             """
                 INSERT INTO fixtures (
@@ -56,9 +55,7 @@ def test_create_match_squads(clean_database):
                 ),
             )
 
-            player_ids.append(
-                cursor.fetchone()[0]
-            )
+            player_ids.append(cursor.fetchone()[0])
 
         for player_id in player_ids:
             cursor.execute(
@@ -76,39 +73,17 @@ def test_create_match_squads(clean_database):
                 ),
             )
 
-    result = create_match_squads(
-        fixture_id
-    )
+    result = create_match_squads(fixture_id)
 
-    assert result["fixture"]["opponent"] == (
-        "Raheny United"
-    )
+    assert result["fixture"]["opponent"] == ("Raheny United")
 
     assert len(result["squad_a"]) == 5
     assert len(result["squad_b"]) == 5
 
-    all_selected_ids = {
-        player["id"]
-        for player in (
-            result["squad_a"]
-            + result["squad_b"]
-        )
-    }
+    all_selected_ids = {player["id"] for player in (result["squad_a"] + result["squad_b"])}
 
-    assert all_selected_ids == set(
-        player_ids
-    )
+    assert all_selected_ids == set(player_ids)
 
-    assert (
-        result["goalkeeper_a"][
-            "can_play_goalkeeper"
-        ]
-        is True
-    )
+    assert result["goalkeeper_a"]["can_play_goalkeeper"] is True
 
-    assert (
-        result["goalkeeper_b"][
-            "can_play_goalkeeper"
-        ]
-        is True
-    )
+    assert result["goalkeeper_b"]["can_play_goalkeeper"] is True

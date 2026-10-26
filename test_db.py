@@ -1,11 +1,8 @@
 from db.database import get_connection
 
 with get_connection() as connection, connection.cursor() as cursor:
-    cursor.execute(
-        "SELECT current_database(), current_user"
-    )
+    cursor.execute("SELECT current_database(), current_user")
 
     result = cursor.fetchone()
 
     print(result)
-        

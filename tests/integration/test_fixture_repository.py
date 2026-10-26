@@ -84,7 +84,6 @@ def test_get_available_players(
     clean_database,
 ):
     with get_connection() as connection, connection.cursor() as cursor:
-
         cursor.execute(
             """
                 INSERT INTO fixtures (
@@ -118,10 +117,7 @@ def test_get_available_players(
                 """
         )
 
-        player_ids = [
-            row[0]
-            for row in cursor.fetchall()
-        ]
+        player_ids = [row[0] for row in cursor.fetchall()]
 
         cursor.execute(
             """
@@ -145,16 +141,11 @@ def test_get_available_players(
             ),
         )
 
-    players = get_available_players(
-        fixture_id
-    )
+    players = get_available_players(fixture_id)
 
     assert len(players) == 2
 
-    assert [
-        player["name"]
-        for player in players
-    ] == [
+    assert [player["name"] for player in players] == [
         "Henry",
         "Ben",
     ]

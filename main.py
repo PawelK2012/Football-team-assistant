@@ -8,7 +8,6 @@ def main():
     print("Type 'quit' to exit.")
 
     while True:
-
         user_input = input("\nCoach: ").strip()
 
         if user_input.lower() in {

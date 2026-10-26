@@ -6,45 +6,28 @@ def average_rating(players: list[dict]) -> float:
     if not players:
         return 0.0
 
-    return sum(
-        player["rating"]
-        for player in players
-    ) / len(players)
+    return sum(player["rating"] for player in players) / len(players)
 
 
 def validate_players(players: list[dict]) -> None:
     if len(players) < 10:
-        raise ValueError(
-            f"At least 10 available players are required. "
-            f"Got {len(players)}."
-        )
+        raise ValueError(f"At least 10 available players are required. Got {len(players)}.")
 
     if len(players) > 16:
-        raise ValueError(
-            f"Maximum supported squad size is 16. "
-            f"Got {len(players)}."
-        )
+        raise ValueError(f"Maximum supported squad size is 16. Got {len(players)}.")
 
     for player in players:
         rating = player["rating"]
 
         if not 1.0 <= rating <= 6.0:
-            raise ValueError(
-                f"Invalid rating for {player['name']}: {rating}"
-            )
+            raise ValueError(f"Invalid rating for {player['name']}: {rating}")
 
         if rating * 2 != int(rating * 2):
-            raise ValueError(
-                f"Rating must use 0.5 increments: "
-                f"{player['name']} has {rating}"
-            )
+            raise ValueError(f"Rating must use 0.5 increments: {player['name']} has {rating}")
 
 
 def has_goalkeeper(squad: list[dict]) -> bool:
-    return any(
-        player["can_play_goalkeeper"]
-        for player in squad
-    )
+    return any(player["can_play_goalkeeper"] for player in squad)
 
 
 def calculate_balance_score(
@@ -52,10 +35,7 @@ def calculate_balance_score(
     squad_b: list[dict],
 ) -> float:
 
-    return abs(
-        average_rating(squad_a)
-        - average_rating(squad_b)
-    )
+    return abs(average_rating(squad_a) - average_rating(squad_b))
 
 
 def select_goalkeeper(
@@ -63,34 +43,22 @@ def select_goalkeeper(
     goalkeeper_history: list[dict],
 ) -> dict:
 
-    eligible_players = [
-        player
-        for player in squad
-        if player["can_play_goalkeeper"]
-    ]
+    eligible_players = [player for player in squad if player["can_play_goalkeeper"]]
 
     if not eligible_players:
-        raise ValueError(
-            "Squad does not contain an eligible goalkeeper."
-        )
+        raise ValueError("Squad does not contain an eligible goalkeeper.")
 
     stats = {}
 
     for player in eligible_players:
-
         player_history = [
-            entry
-            for entry in goalkeeper_history
-            if entry["player_id"] == player["id"]
+            entry for entry in goalkeeper_history if entry["player_id"] == player["id"]
         ]
 
         appearances = len(player_history)
 
         if player_history:
-            last_played = max(
-                date.fromisoformat(entry["date"])
-                for entry in player_history
-            )
+            last_played = max(date.fromisoformat(entry["date"]) for entry in player_history)
         else:
             last_played = date.min
 
@@ -126,19 +94,11 @@ def create_balanced_squads(
         available_players,
         squad_a_size,
     ):
-
         squad_a = list(squad_a_tuple)
 
-        squad_a_ids = {
-            player["id"]
-            for player in squad_a
-        }
+        squad_a_ids = {player["id"] for player in squad_a}
 
-        squad_b = [
-            player
-            for player in available_players
-            if player["id"] not in squad_a_ids
-        ]
+        squad_b = [player for player in available_players if player["id"] not in squad_a_ids]
 
         # Hard constraint:
         # both squads need a potential goalkeeper.
@@ -154,7 +114,6 @@ def create_balanced_squads(
         )
 
         if score < best_score:
-
             best_score = score
 
             best_result = {
@@ -175,9 +134,7 @@ def create_balanced_squads(
             }
 
     if best_result is None:
-        raise ValueError(
-            "Unable to create two squads with eligible goalkeepers."
-        )
+        raise ValueError("Unable to create two squads with eligible goalkeepers.")
 
     best_result["goalkeeper_a"] = select_goalkeeper(
         best_result["squad_a"],

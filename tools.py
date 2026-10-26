@@ -30,14 +30,14 @@ def get_available_players(fixture_id: int) -> list:
 
     state["current_fixture_id"] = fixture_id
 
-    return get_available_players_from_db(
-        fixture_id
-    )
+    return get_available_players_from_db(fixture_id)
+
 
 def get_goalkeeper_history() -> list:
     """Get goalkeeper selections from previous matches."""
 
     return get_goalkeeper_history_from_db()
+
 
 def create_current_match_squads() -> dict:
     """
@@ -47,9 +47,7 @@ def create_current_match_squads() -> dict:
     fixture_id = state["current_fixture_id"]
 
     if fixture_id is None:
-        raise ValueError(
-            "No current fixture has been selected."
-        )
+        raise ValueError("No current fixture has been selected.")
 
     return create_match_squads(fixture_id)
 
@@ -65,19 +63,13 @@ def create_match_squads(fixture_id: int) -> dict:
     fixture = get_fixture_from_db(fixture_id)
 
     if fixture is None:
-        raise ValueError(
-            f"Fixture {fixture_id} does not exist."
-        )
+        raise ValueError(f"Fixture {fixture_id} does not exist.")
 
     state["current_fixture_id"] = fixture_id
 
-    available_players = get_available_players_from_db(
-        fixture_id
-    )
+    available_players = get_available_players_from_db(fixture_id)
 
-    goalkeeper_history = (
-        get_goalkeeper_history_from_db()
-    )
+    goalkeeper_history = get_goalkeeper_history_from_db()
 
     squads = create_balanced_squads(
         available_players,
@@ -88,6 +80,7 @@ def create_match_squads(fixture_id: int) -> dict:
         "fixture": fixture,
         **squads,
     }
+
 
 TOOLS = {
     "get_fixtures": get_fixtures,

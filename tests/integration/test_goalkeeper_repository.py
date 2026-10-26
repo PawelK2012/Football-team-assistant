@@ -8,7 +8,6 @@ def test_get_goalkeeper_history(
     clean_database,
 ):
     with get_connection() as connection, connection.cursor() as cursor:
-
         cursor.execute(
             """
                 INSERT INTO players (

@@ -33,15 +33,9 @@ def test_creates_two_squads_using_every_player(players):
     assert len(squad_a) == 5
     assert len(squad_b) == 5
 
-    selected_ids = {
-        player["id"]
-        for player in squad_a + squad_b
-    }
+    selected_ids = {player["id"] for player in squad_a + squad_b}
 
-    assert selected_ids == {
-        player["id"]
-        for player in players
-    }
+    assert selected_ids == {player["id"] for player in players}
 
 
 def test_player_cannot_be_in_both_squads(players):
@@ -50,15 +44,9 @@ def test_player_cannot_be_in_both_squads(players):
         goalkeeper_history=[],
     )
 
-    squad_a_ids = {
-        player["id"]
-        for player in result["squad_a"]
-    }
+    squad_a_ids = {player["id"] for player in result["squad_a"]}
 
-    squad_b_ids = {
-        player["id"]
-        for player in result["squad_b"]
-    }
+    squad_b_ids = {player["id"] for player in result["squad_b"]}
 
     assert squad_a_ids.isdisjoint(squad_b_ids)
 
@@ -69,15 +57,9 @@ def test_each_squad_has_goalkeeper(players):
         goalkeeper_history=[],
     )
 
-    assert any(
-        player["can_play_goalkeeper"]
-        for player in result["squad_a"]
-    )
+    assert any(player["can_play_goalkeeper"] for player in result["squad_a"])
 
-    assert any(
-        player["can_play_goalkeeper"]
-        for player in result["squad_b"]
-    )
+    assert any(player["can_play_goalkeeper"] for player in result["squad_b"])
 
 
 def test_rejects_fewer_than_ten_players(players):
@@ -89,6 +71,7 @@ def test_rejects_fewer_than_ten_players(players):
             players[:9],
             goalkeeper_history=[],
         )
+
 
 @pytest.mark.parametrize(
     ("player_count", "expected_sizes"),
@@ -125,6 +108,7 @@ def test_squad_sizes(
         len(result["squad_a"]),
         len(result["squad_b"]),
     ) == expected_sizes
+
 
 def test_prefers_player_with_fewer_goalkeeper_appearances():
     players = [

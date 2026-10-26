@@ -64,7 +64,6 @@ def run_agent(user_input: str) -> str:
     )
 
     while True:
-
         response = chat(
             model=MODEL,
             messages=messages,
@@ -77,36 +76,25 @@ def run_agent(user_input: str) -> str:
             return response.message.content
 
         for call in response.message.tool_calls:
-
             tool_name = call.function.name
             arguments = call.function.arguments
 
-            print(
-                f"\n[Agent] Calling: {tool_name}"
-            )
-            print(
-                f"[Agent] Arguments: {arguments}"
-            )
+            print(f"\n[Agent] Calling: {tool_name}")
+            print(f"[Agent] Arguments: {arguments}")
 
             tool = TOOLS.get(tool_name)
 
             if tool is None:
-                result = {
-                    "error": f"Unknown tool: {tool_name}"
-                }
+                result = {"error": f"Unknown tool: {tool_name}"}
 
             else:
                 try:
                     result = tool(**arguments)
 
                 except Exception as error:
-                    result = {
-                        "error": str(error)
-                    }
+                    result = {"error": str(error)}
 
-            print(
-                f"[Tool] Result: {result}"
-            )
+            print(f"[Tool] Result: {result}")
 
             messages.append(
                 {
