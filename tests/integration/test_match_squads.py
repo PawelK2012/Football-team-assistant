@@ -1,5 +1,5 @@
-from db.database import get_connection
-from services.match_service import (
+from football_team_assistant.db.database import get_connection
+from football_team_assistant.services.match_service import (
     create_match_squads,
 )
 

@@ -2,7 +2,7 @@ import json
 
 from ollama import chat
 
-from tools import (
+from football_team_assistant.tools import (
     TOOL_DEFINITIONS,
     TOOLS,
 )

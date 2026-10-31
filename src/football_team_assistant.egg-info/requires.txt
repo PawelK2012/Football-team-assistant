@@ -1,0 +1,6 @@
+fastapi
+mcp[cli]
+ollama<1,>=0.6
+psycopg[binary]<4,>=3.2
+python-dotenv<2,>=1.1
+uvicorn[standard]

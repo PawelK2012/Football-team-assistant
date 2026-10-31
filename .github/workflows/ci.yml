@@ -97,7 +97,7 @@ jobs:
             -h localhost \
             -U football \
             -d football_assistant_test \
-            -f db/init.sql
+            -f src/football_team_assistant/db/init.sql
 
       - name: Run integration tests
         run: uv run --locked pytest -v tests/integration
