@@ -1,7 +1,5 @@
 ### Football team assistant
 
-finished at 1. Create API models
-
 ## High level architecture 
 
 

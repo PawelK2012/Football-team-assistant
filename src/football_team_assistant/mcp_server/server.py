@@ -7,9 +7,7 @@ from football_team_assistant.repositories.player_repository import (
     get_available_players,
 )
 
-mcp = MCPServer(
-    "Football Team Assistant"
-)
+mcp = MCPServer("Football Team Assistant")
 
 
 @mcp.tool()
@@ -30,9 +28,7 @@ def available_players(
         fixture_id: ID of the fixture.
     """
 
-    return get_available_players(
-        fixture_id
-    )
+    return get_available_players(fixture_id)
 
 
 if __name__ == "__main__":
