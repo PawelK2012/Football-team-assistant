@@ -30,6 +30,4 @@ def list_fixtures():
 def list_available_players(
     fixture_id: int,
 ):
-    return get_available_players(
-        fixture_id
-    )
+    return get_available_players(fixture_id)

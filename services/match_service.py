@@ -17,17 +17,11 @@ def create_match_squads(
     fixture = get_fixture(fixture_id)
 
     if fixture is None:
-        raise ValueError(
-            f"Fixture {fixture_id} does not exist."
-        )
+        raise ValueError(f"Fixture {fixture_id} does not exist.")
 
-    available_players = get_available_players(
-        fixture_id
-    )
+    available_players = get_available_players(fixture_id)
 
-    goalkeeper_history = (
-        get_goalkeeper_history()
-    )
+    goalkeeper_history = get_goalkeeper_history()
 
     squads = create_balanced_squads(
         available_players,

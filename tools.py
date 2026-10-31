@@ -1,7 +1,4 @@
 from repositories.fixture_repository import (
-    get_fixture as get_fixture_from_db,
-)
-from repositories.fixture_repository import (
     get_fixtures as get_fixtures_from_db,
 )
 from repositories.goalkeeper_repository import (
@@ -13,7 +10,6 @@ from repositories.player_repository import (
 from services.match_service import (
     create_match_squads as create_match_squads_service,
 )
-from squad_optimizer import create_balanced_squads
 from state import state
 
 
@@ -54,6 +50,7 @@ def create_current_match_squads() -> dict:
 
     return create_match_squads(fixture_id)
 
+
 def create_match_squads(
     fixture_id: int,
 ) -> dict:
@@ -66,9 +63,7 @@ def create_match_squads(
 
     state["current_fixture_id"] = fixture_id
 
-    return create_match_squads_service(
-        fixture_id
-    )
+    return create_match_squads_service(fixture_id)
 
 
 # def create_match_squads(fixture_id: int) -> dict:

@@ -22,9 +22,7 @@ def generate_squads(
     fixture_id: int,
 ):
     try:
-        return create_match_squads(
-            fixture_id
-        )
+        return create_match_squads(fixture_id)
 
     except ValueError as error:
         raise HTTPException(
