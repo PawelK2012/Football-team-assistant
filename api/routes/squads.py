@@ -3,6 +3,7 @@ from fastapi import (
     HTTPException,
 )
 
+from api.models.squad import SquadResult
 from services.match_service import (
     create_match_squads,
 )
@@ -13,7 +14,10 @@ router = APIRouter(
 )
 
 
-@router.post("/{fixture_id}/squads")
+@router.post(
+    "/{fixture_id}/squads",
+    response_model=SquadResult,
+)
 def generate_squads(
     fixture_id: int,
 ):
