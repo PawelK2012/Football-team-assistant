@@ -1,4 +1,4 @@
-from db.database import get_connection
+from football_team_assistant.db.database import get_connection
 
 
 def get_available_players(

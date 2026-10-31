@@ -1,5 +1,5 @@
-from db.database import get_connection
-from repositories.goalkeeper_repository import (
+from football_team_assistant.db.database import get_connection
+from football_team_assistant.repositories.goalkeeper_repository import (
     get_goalkeeper_history,
 )
 

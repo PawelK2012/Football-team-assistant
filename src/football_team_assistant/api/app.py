@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 
-from api.routes.fixtures import (
+from football_team_assistant.api.routes.fixtures import (
     router as fixtures_router,
 )
-from api.routes.squads import (
+from football_team_assistant.api.routes.squads import (
     router as squads_router,
 )
 

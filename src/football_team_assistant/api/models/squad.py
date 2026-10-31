@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
-from api.models.fixture import Fixture
-from api.models.player import Player
+from football_team_assistant.api.models.fixture import Fixture
+from football_team_assistant.api.models.player import Player
 
 
 class SquadResult(BaseModel):

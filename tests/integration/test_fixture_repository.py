@@ -1,9 +1,9 @@
-from db.database import get_connection
-from repositories.fixture_repository import (
+from football_team_assistant.db.database import get_connection
+from football_team_assistant.repositories.fixture_repository import (
     get_fixture,
     get_fixtures,
 )
-from repositories.player_repository import (
+from football_team_assistant.repositories.player_repository import (
     get_available_players,
 )
 

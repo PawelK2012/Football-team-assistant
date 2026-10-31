@@ -1,13 +1,13 @@
-from repositories.fixture_repository import (
+from football_team_assistant.repositories.fixture_repository import (
     get_fixture,
 )
-from repositories.goalkeeper_repository import (
+from football_team_assistant.repositories.goalkeeper_repository import (
     get_goalkeeper_history,
 )
-from repositories.player_repository import (
+from football_team_assistant.repositories.player_repository import (
     get_available_players,
 )
-from squad_optimizer import create_balanced_squads
+from football_team_assistant.squad_optimizer import create_balanced_squads
 
 
 def create_match_squads(

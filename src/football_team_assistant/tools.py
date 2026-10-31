@@ -1,16 +1,16 @@
-from repositories.fixture_repository import (
+from football_team_assistant.repositories.fixture_repository import (
     get_fixtures as get_fixtures_from_db,
 )
-from repositories.goalkeeper_repository import (
+from football_team_assistant.repositories.goalkeeper_repository import (
     get_goalkeeper_history as get_goalkeeper_history_from_db,
 )
-from repositories.player_repository import (
+from football_team_assistant.repositories.player_repository import (
     get_available_players as get_available_players_from_db,
 )
-from services.match_service import (
+from football_team_assistant.services.match_service import (
     create_match_squads as create_match_squads_service,
 )
-from state import state
+from football_team_assistant.state import state
 
 
 def get_fixtures() -> list:

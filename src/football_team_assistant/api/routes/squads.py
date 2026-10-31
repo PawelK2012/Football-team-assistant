@@ -3,8 +3,8 @@ from fastapi import (
     HTTPException,
 )
 
-from api.models.squad import SquadResult
-from services.match_service import (
+from football_team_assistant.api.models.squad import SquadResult
+from football_team_assistant.services.match_service import (
     create_match_squads,
 )
 

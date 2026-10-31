@@ -1,7 +1,8 @@
 import pytest
 
-from squad_optimizer import (
+from football_team_assistant.squad_optimizer import (
     create_balanced_squads,
+    select_goalkeeper,
 )
 
 
@@ -140,8 +141,6 @@ def test_prefers_player_with_fewer_goalkeeper_appearances():
             "player_id": 2,
         },
     ]
-
-    from squad_optimizer import select_goalkeeper
 
     goalkeeper = select_goalkeeper(
         players,

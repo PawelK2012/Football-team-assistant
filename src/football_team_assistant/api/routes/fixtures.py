@@ -1,11 +1,11 @@
 from fastapi import APIRouter
 
-from api.models.fixture import Fixture
-from api.models.player import Player
-from repositories.fixture_repository import (
+from football_team_assistant.api.models.fixture import Fixture
+from football_team_assistant.api.models.player import Player
+from football_team_assistant.repositories.fixture_repository import (
     get_fixtures,
 )
-from repositories.player_repository import (
+from football_team_assistant.repositories.player_repository import (
     get_available_players,
 )
 

@@ -1,5 +1,5 @@
-from agent import run_agent
-from state import state
+from football_team_assistant.agent import run_agent
+from football_team_assistant.state import state
 
 
 def main():
