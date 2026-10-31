@@ -1,7 +1,4 @@
 from repositories.fixture_repository import (
-    get_fixture as get_fixture_from_db,
-)
-from repositories.fixture_repository import (
     get_fixtures as get_fixtures_from_db,
 )
 from repositories.goalkeeper_repository import (
@@ -10,7 +7,9 @@ from repositories.goalkeeper_repository import (
 from repositories.player_repository import (
     get_available_players as get_available_players_from_db,
 )
-from squad_optimizer import create_balanced_squads
+from services.match_service import (
+    create_match_squads as create_match_squads_service,
+)
 from state import state
 
 
@@ -52,34 +51,49 @@ def create_current_match_squads() -> dict:
     return create_match_squads(fixture_id)
 
 
-def create_match_squads(fixture_id: int) -> dict:
+def create_match_squads(
+    fixture_id: int,
+) -> dict:
     """
     Create two balanced squads for a specific fixture.
 
     Args:
-        fixture_id: The ID of the fixture to create squads for.
+        fixture_id: The ID of the fixture.
     """
-
-    fixture = get_fixture_from_db(fixture_id)
-
-    if fixture is None:
-        raise ValueError(f"Fixture {fixture_id} does not exist.")
 
     state["current_fixture_id"] = fixture_id
 
-    available_players = get_available_players_from_db(fixture_id)
+    return create_match_squads_service(fixture_id)
 
-    goalkeeper_history = get_goalkeeper_history_from_db()
 
-    squads = create_balanced_squads(
-        available_players,
-        goalkeeper_history,
-    )
+# def create_match_squads(fixture_id: int) -> dict:
+#     """
+#     Create two balanced squads for a specific fixture.
 
-    return {
-        "fixture": fixture,
-        **squads,
-    }
+#     Args:
+#         fixture_id: The ID of the fixture to create squads for.
+#     """
+
+#     fixture = get_fixture_from_db(fixture_id)
+
+#     if fixture is None:
+#         raise ValueError(f"Fixture {fixture_id} does not exist.")
+
+#     state["current_fixture_id"] = fixture_id
+
+#     available_players = get_available_players_from_db(fixture_id)
+
+#     goalkeeper_history = get_goalkeeper_history_from_db()
+
+#     squads = create_balanced_squads(
+#         available_players,
+#         goalkeeper_history,
+#     )
+
+#     return {
+#         "fixture": fixture,
+#         **squads,
+#     }
 
 
 TOOLS = {

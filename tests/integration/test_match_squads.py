@@ -1,5 +1,7 @@
 from db.database import get_connection
-from tools import create_match_squads
+from services.match_service import (
+    create_match_squads,
+)
 
 
 def test_create_match_squads(clean_database):
