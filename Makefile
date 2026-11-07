@@ -12,10 +12,13 @@ coverage:
 	$(UV) run pytest --cov --cov-report=term-missing tests
 
 run:
-	$(UV) run python main.py
+	uv --config-file ./uv.toml run python -m football_team_assistant.main
 
 server:
 	uvicorn api.app:app --reload
+
+client:
+	uv run python -m football_team_assistant.mcp_client
 
 lint:
 	$(UV) run ruff check .
@@ -24,3 +27,6 @@ lint:
 format:
 	$(UV) run ruff check --fix .
 	$(UV) run ruff format .
+
+db:
+	docker compose up -d postgres
