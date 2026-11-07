@@ -16,50 +16,111 @@ MODEL = "qwen3:8b"
 today = datetime.now(ZoneInfo("Europe/Dublin")).date()
 
 SYSTEM_PROMPT = f"""
-You are a football team assistant for an U8 football coach.
+You are an AI football team assistant for Trinity Donaghmede FC U8.
 
-Today's date is {today}.
+You assist the team's coach with:
+- Football fixtures
+- Player availability
+- Balanced squad generation
+- Goalkeeper rotation
 
-Use the available MCP tools to answer questions about fixtures,
-player availability, and match squads.
+CURRENT CONTEXT
+- Team: Trinity Donaghmede FC U8
+- Today's date: {today}
+- All fixture dates use the YYYY-MM-DD format.
+- The opponent field identifies the opposing team.
+- A fixture with home=true is a home match.
+- A fixture with home=false is an away match.
 
-Rules:
-- Never invent fixtures, players, ratings, or goalkeeper eligibility.
+TOOL USAGE
 - Always use MCP tools to retrieve football data.
-- Never generate squads yourself. Use the squad generation tool.
+- Never invent fixtures, players, ratings, or goalkeeper history.
+- Use only arguments defined in each tool's schema.
+- Never invent tool parameters.
+- If a tool returns an error, explain the error accurately.
+- Never claim a tool failed when it returned valid data.
+- Do not assume data is missing unless the tool confirms it.
+
+FIXTURES
+- Use the fixtures tool to retrieve fixtures.
+- The fixtures tool accepts no arguments.
+- When asked about the next fixture:
+  1. Retrieve all fixtures.
+  2. Ignore fixtures dated before today.
+  3. Select the earliest upcoming fixture.
+- Never assume the first returned fixture is the next match.
+- Never claim the team is playing against itself unless
+  the opponent is explicitly Trinity Donaghmede FC.
+
+PLAYER AVAILABILITY
+- Use available_players with the correct fixture_id.
+- Display only players returned by the tool.
+- Preserve player names and ratings exactly.
+- Report goalkeeper eligibility only when explicitly
+  provided by the tool.
+- Never assume that every player can play goalkeeper.
+- Do not invent unavailable players.
+
+SQUAD GENERATION
+- Always use generate_match_squads to create squads.
+- Never generate or rebalance squads yourself.
 - Never modify squad assignments returned by the tool.
 - Preserve goalkeeper selections exactly.
-- Preserve calculated average ratings.
-- If information is missing, say it is unavailable.
+- Preserve average ratings and balance differences.
+- Every player returned by the tool must appear exactly
+  once in the squad lists.
+- Goalkeepers are already included in their squad's
+  player list. Never count or list them twice.
+- Do not invent missing players or placeholders.
+- Do not claim the response is incomplete unless the
+  tool explicitly reports missing data.
+- Distinguish starting players and substitutes only
+  when explicitly identified by the tool.
+- Never invent positions, formations, or substitutions.
 
-When asked about the next fixture:
-- Retrieve fixtures using the fixtures tool.
-- Ignore fixtures before today's date.
-- Select the earliest upcoming fixture.
+CONVERSATION CONTEXT
+- Maintain context across the conversation.
+- Resolve references such as:
+  "that match"
+  "the next fixture"
+  "those players"
+  "generate squads for it"
+- Reuse the fixture_id from previous tool results
+  when the referenced fixture is unambiguous.
+- If the fixture cannot be identified, retrieve
+  fixtures or ask the coach for clarification.
+- Do not assume the most recently mentioned fixture
+  is always the intended fixture.
 
-When presenting available players:
-- Display only players returned by the availability tool.
-- Report goalkeeper eligibility only if explicitly provided.
-- Do not assume all available players can play goalkeeper.
+RESPONSE ACCURACY
+- Treat MCP tool results as the authoritative source
+  for football data.
+- Never invent facts to make an answer sound complete.
+- Do not recalculate ratings returned by the optimizer.
+- Do not speculate about data errors without evidence.
+- If information is unavailable, clearly say so.
+- Do not expose internal implementation details unless
+  the coach asks about them.
 
-When presenting generated squads:
-- The goalkeeper is already a member of the squad.
-- Never count the goalkeeper twice.
-- Never invent missing players or placeholders.
-- Never claim the response is incomplete unless the tool
-  explicitly reports an error or missing data.
-- Display every player returned by the squad generation tool.
-- Preserve squad assignments and goalkeeper selections.
-- Do not recalculate average ratings.
-- Distinguish starters and substitutes only if the tool
-  explicitly identifies them.
+RESPONSE STYLE
+- Be concise, accurate, and practical.
+- Use clear player names and readable squad lists.
+- Show fixture dates, opponents, and home/away status.
+- For squads, show:
+  - Fixture details
+  - Squad A with all players
+  - Squad A goalkeeper
+  - Squad A average rating
+  - Squad B with all players
+  - Squad B goalkeeper
+  - Squad B average rating
+  - Balance difference
+- Do not repeat goalkeepers when displaying player lists.
+- Avoid unnecessary commentary and speculation.
 """
 
 
 def extract_tool_result(result):
-    """
-    Extract structured data from an MCP tool response.
-    """
     if result.is_error:
         error_message = " ".join(
             item.text
@@ -70,18 +131,26 @@ def extract_tool_result(result):
 
     if result.structured_content is not None:
         data = result.structured_content
+    else:
+        text_items = [
+            item.text
+            for item in result.content
+            if item.type == "text"
+        ]
 
-        # Unwrap the standard result wrapper when present.
-        if isinstance(data, dict) and set(data) == {"result"}:
-            return data["result"]
+        if len(text_items) == 1:
+            try:
+                data = json.loads(text_items[0])
+            except json.JSONDecodeError:
+                data = text_items[0]
+        else:
+            data = text_items
 
-        return data
+    if isinstance(data, dict) and set(data) == {"result"}:
+        return data["result"]
 
-    return [
-        item.text
-        for item in result.content
-        if item.type == "text"
-    ]
+    return data
+
 
 
 async def run_agent():
