@@ -4,24 +4,19 @@
 
 
 `````
-main.py
-   │
-   │ user interaction
-   ▼
-agent.py
-   │
-   │ LLM reasoning + tool execution
-   ▼
-tools.py
-   │
-   │ application capabilities
-   ▼
-squad_optimizer.py
-   │
-   │ deterministic business logic
-   ▼
-data.py
-     in-memory data
+Coach
+  ↓
+Qwen (Ollama)
+  ↓
+MCP Client
+  ↓
+MCP Server
+  ↓
+Match Service
+  ↓
+Repositories + Optimizer
+  ↓
+PostgreSQL
 `````
 ## AI Agent flow
 Needs update

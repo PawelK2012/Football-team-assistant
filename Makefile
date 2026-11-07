@@ -20,6 +20,8 @@ server:
 client:
 	uv run python -m football_team_assistant.mcp_client
 
+agent:
+	uv run python -m football_team_assistant.mcp_agent
 lint:
 	$(UV) run ruff check .
 	$(UV) run ruff format --check .

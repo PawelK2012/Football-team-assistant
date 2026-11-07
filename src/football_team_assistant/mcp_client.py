@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -21,11 +22,19 @@ async def main():
 
             tools = await session.list_tools()
 
-            for tool in tools.tools:
-                print(f"Tool: {tool.name}")
-                print(f"Description: {tool.description}")
-                print(f"Schema: {tool.input_schema}")
-                print()
+            ollama_tools = [
+                to_ollama_tool(tool)
+                for tool in tools.tools
+            ]
+
+            for tool in ollama_tools:
+                print(tool)
+            
+            # for tool in tools.tools:
+            #     print(f"Tool: {tool.name}")
+            #     print(f"Description: {tool.description}")
+            #     print(f"Schema: {tool.input_schema}")
+            #     print()
 
             result = await session.call_tool(
                 "fixtures",
@@ -33,6 +42,23 @@ async def main():
             )
 
             print("Fixtures:", result)
+
+            result = await session.call_tool(
+                "generate_match_squads",
+                arguments={"fixture_id": 6},
+            )
+
+            print(json.dumps(result.structured_content, indent=2))
+
+def to_ollama_tool(tool) -> dict:
+    return {
+        "type": "function",
+        "function": {
+            "name": tool.name,
+            "description": tool.description or "",
+            "parameters": tool.input_schema,
+        },
+    }
 
 
 if __name__ == "__main__":
