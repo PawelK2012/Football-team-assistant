@@ -22,14 +22,11 @@ async def main():
 
             tools = await session.list_tools()
 
-            ollama_tools = [
-                to_ollama_tool(tool)
-                for tool in tools.tools
-            ]
+            ollama_tools = [to_ollama_tool(tool) for tool in tools.tools]
 
             for tool in ollama_tools:
                 print(tool)
-            
+
             # for tool in tools.tools:
             #     print(f"Tool: {tool.name}")
             #     print(f"Description: {tool.description}")
@@ -49,6 +46,7 @@ async def main():
             )
 
             print(json.dumps(result.structured_content, indent=2))
+
 
 def to_ollama_tool(tool) -> dict:
     return {

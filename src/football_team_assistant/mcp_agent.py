@@ -1,4 +1,3 @@
-
 import asyncio
 import json
 from datetime import datetime
@@ -9,7 +8,6 @@ from mcp.client.stdio import stdio_client
 from ollama import AsyncClient
 
 from football_team_assistant.mcp_client import to_ollama_tool
-
 
 MODEL = "qwen3:8b"
 
@@ -122,21 +120,13 @@ RESPONSE STYLE
 
 def extract_tool_result(result):
     if result.is_error:
-        error_message = " ".join(
-            item.text
-            for item in result.content
-            if item.type == "text"
-        )
+        error_message = " ".join(item.text for item in result.content if item.type == "text")
         raise RuntimeError(error_message or "MCP tool failed")
 
     if result.structured_content is not None:
         data = result.structured_content
     else:
-        text_items = [
-            item.text
-            for item in result.content
-            if item.type == "text"
-        ]
+        text_items = [item.text for item in result.content if item.type == "text"]
 
         if len(text_items) == 1:
             try:
@@ -150,7 +140,6 @@ def extract_tool_result(result):
         return data["result"]
 
     return data
-
 
 
 async def run_agent():
@@ -179,14 +168,9 @@ async def run_agent():
 
             discovered_tools = await session.list_tools()
 
-            ollama_tools = [
-                to_ollama_tool(tool)
-                for tool in discovered_tools.tools
-            ]
+            ollama_tools = [to_ollama_tool(tool) for tool in discovered_tools.tools]
 
-            tool_names = {
-                tool.name for tool in discovered_tools.tools
-            }
+            tool_names = {tool.name for tool in discovered_tools.tools}
 
             print(
                 "Connected to MCP server. Tools:",
@@ -222,10 +206,7 @@ async def run_agent():
                             tools=ollama_tools,
                         )
                     except Exception as error:
-                        print(
-                            f"[OLLAMA ERROR] "
-                            f"{type(error).__name__}: {error}"
-                        )
+                        print(f"[OLLAMA ERROR] {type(error).__name__}: {error}")
                         break
 
                     messages.append(response.message)
@@ -247,9 +228,7 @@ async def run_agent():
 
                         try:
                             if name not in tool_names:
-                                raise ValueError(
-                                    f"Unknown MCP tool: {name}"
-                                )
+                                raise ValueError(f"Unknown MCP tool: {name}")
 
                             result = await session.call_tool(
                                 name,
@@ -278,14 +257,9 @@ async def run_agent():
                             )
 
                         except Exception as error:
-                            print(
-                                f"[MCP ERROR] "
-                                f"{type(error).__name__}: {error}"
-                            )
+                            print(f"[MCP ERROR] {type(error).__name__}: {error}")
 
-                            tool_result = {
-                                "error": str(error)
-                            }
+                            tool_result = {"error": str(error)}
 
                         messages.append(
                             {
@@ -299,9 +273,7 @@ async def run_agent():
                         )
 
                 else:
-                    print(
-                        "[AGENT] Maximum tool-call iterations reached."
-                    )
+                    print("[AGENT] Maximum tool-call iterations reached.")
 
 
 if __name__ == "__main__":
