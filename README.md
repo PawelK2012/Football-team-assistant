@@ -55,6 +55,25 @@ Qwen (LLM)
     natural-language answer
 `````
 
+## Structure
+
+`````
+src/football_team_assistant/
+├── mcp_agent.py          # CLI entry point
+├── football_agent.py     # Agent orchestration
+├── mcp_client.py         # Existing tool conversion
+├── formatters.py         # Existing formatting and validation
+├── mcp_server/
+│   └── server.py
+└── ...
+
+tests/
+├── test_formatters.py
+├── test_squad_validation.py
+├── test_mcp_agent.py
+└── test_football_agent.py
+`````
+
 ## Test
 
 > Coach: Who is available for the Raheny game? 

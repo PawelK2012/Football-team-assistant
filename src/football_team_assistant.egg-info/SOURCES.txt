@@ -2,7 +2,11 @@ README.md
 pyproject.toml
 src/football_team_assistant/__init__.py
 src/football_team_assistant/agent.py
+src/football_team_assistant/football_agent.py
+src/football_team_assistant/formatters.py
 src/football_team_assistant/main.py
+src/football_team_assistant/mcp_agent.py
+src/football_team_assistant/mcp_client.py
 src/football_team_assistant/squad_optimizer.py
 src/football_team_assistant/state.py
 src/football_team_assistant/tools.py
@@ -30,4 +34,8 @@ src/football_team_assistant/repositories/goalkeeper_repository.py
 src/football_team_assistant/repositories/player_repository.py
 src/football_team_assistant/services/__init__.py
 src/football_team_assistant/services/match_service.py
+tests/test_football_agent.py
+tests/test_formatters.py
+tests/test_mcp_agent.py
 tests/test_squad_optimizer.py
+tests/test_squad_validation.py

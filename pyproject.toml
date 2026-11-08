@@ -27,6 +27,7 @@ line-length = 100
 [dependency-groups]
 dev = [
     "pytest>=8,<10",
+    "pytest-asyncio>=1.4.1.post1",
     "pytest-cov>=7.1.0",
     "ruff>=0.17.2",
 ]
