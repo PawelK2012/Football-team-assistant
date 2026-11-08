@@ -1,12 +1,9 @@
-
-import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 
 from football_team_assistant.football_agent import FootballAgent
-
 
 TOOLS = [
     {
@@ -16,18 +13,8 @@ TOOLS = [
             "description": "",
             "parameters": {
                 "type": "object",
-                "properties": (
-                    {}
-                    if name == "fixtures"
-                    else {
-                        "fixture_id": {"type": "integer"}
-                    }
-                ),
-                "required": (
-                    []
-                    if name == "fixtures"
-                    else ["fixture_id"]
-                ),
+                "properties": ({} if name == "fixtures" else {"fixture_id": {"type": "integer"}}),
+                "required": ([] if name == "fixtures" else ["fixture_id"]),
             },
         },
     }
@@ -96,9 +83,7 @@ async def test_availability_uses_exact_tool_data(agent):
 
     agent.ollama.chat.side_effect = [
         model_response(tool_call("fixtures")),
-        model_response(
-            tool_call("available_players", fixture_id=6)
-        ),
+        model_response(tool_call("available_players", fixture_id=6)),
     ]
 
     agent.mcp_session.call_tool.side_effect = [
@@ -106,9 +91,7 @@ async def test_availability_uses_exact_tool_data(agent):
         mcp_result(players),
     ]
 
-    answer = await agent.ask(
-        "Who is available for the next match?"
-    )
+    answer = await agent.ask("Who is available for the next match?")
 
     assert "1. Henry (4.5)" in answer
     assert "2. Cuan (3.5)" in answer
@@ -136,9 +119,7 @@ async def test_squad_generation_uses_exact_tool_data(
 
     agent.ollama.chat.side_effect = [
         model_response(tool_call("fixtures")),
-        model_response(
-            tool_call("generate_match_squads", fixture_id=6)
-        ),
+        model_response(tool_call("generate_match_squads", fixture_id=6)),
     ]
 
     agent.mcp_session.call_tool.side_effect = [
@@ -146,9 +127,7 @@ async def test_squad_generation_uses_exact_tool_data(
         mcp_result(sample_squads),
     ]
 
-    answer = await agent.ask(
-        "Generate two balanced squads for Verona FC"
-    )
+    answer = await agent.ask("Generate two balanced squads for Verona FC")
 
     assert "Squad A" in answer
     assert "Squad B" in answer
@@ -164,9 +143,7 @@ async def test_squad_generation_uses_exact_tool_data(
 
 @pytest.mark.asyncio
 async def test_unknown_tool_is_rejected(agent):
-    agent.ollama.chat.return_value = model_response(
-        tool_call("delete_all_players")
-    )
+    agent.ollama.chat.return_value = model_response(tool_call("delete_all_players"))
 
     with pytest.raises(ValueError, match="Unknown tool"):
         await agent.ask("Delete all players")
@@ -176,9 +153,7 @@ async def test_unknown_tool_is_rejected(agent):
 
 @pytest.mark.asyncio
 async def test_mcp_error_is_propagated(agent):
-    agent.ollama.chat.return_value = model_response(
-        tool_call("available_players", fixture_id=6)
-    )
+    agent.ollama.chat.return_value = model_response(tool_call("available_players", fixture_id=6))
 
     agent.mcp_session.call_tool.return_value = SimpleNamespace(
         is_error=True,
@@ -205,9 +180,7 @@ async def test_agent_iteration_limit(agent, monkeypatch):
         3,
     )
 
-    agent.ollama.chat.return_value = model_response(
-        tool_call("fixtures")
-    )
+    agent.ollama.chat.return_value = model_response(tool_call("fixtures"))
 
     agent.mcp_session.call_tool.return_value = mcp_result([])
 

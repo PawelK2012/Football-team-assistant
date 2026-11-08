@@ -1,4 +1,3 @@
-
 import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -49,21 +48,13 @@ Maintain conversation context across questions.
 
 def extract_tool_result(result):
     if result.is_error:
-        message = " ".join(
-            item.text
-            for item in result.content
-            if item.type == "text"
-        )
+        message = " ".join(item.text for item in result.content if item.type == "text")
         raise RuntimeError(message or "MCP tool failed")
 
     if result.structured_content is not None:
         data = result.structured_content
     else:
-        items = [
-            item.text
-            for item in result.content
-            if item.type == "text"
-        ]
+        items = [item.text for item in result.content if item.type == "text"]
 
         if len(items) == 1:
             try:
@@ -85,9 +76,7 @@ class FootballAgent:
         self.mcp_session = mcp_session
         self.tools = tools
 
-        self.tool_names = {
-            tool["function"]["name"] for tool in tools
-        }
+        self.tool_names = {tool["function"]["name"] for tool in tools}
 
         self.messages = [
             {
@@ -97,10 +86,12 @@ class FootballAgent:
         ]
 
     async def ask(self, question: str) -> str:
-        self.messages.append({
-            "role": "user",
-            "content": question,
-        })
+        self.messages.append(
+            {
+                "role": "user",
+                "content": question,
+            }
+        )
 
         # A direct data request must be answered from the
         # corresponding tool, not from a model-generated list.
@@ -108,15 +99,20 @@ class FootballAgent:
 
         lower_question = question.lower()
 
-        if any(word in lower_question for word in (
-            "generate", "create", "build",
-        )) and "squad" in lower_question:
+        if (
+            any(
+                word in lower_question
+                for word in (
+                    "generate",
+                    "create",
+                    "build",
+                )
+            )
+            and "squad" in lower_question
+        ):
             requested_tool = "generate_match_squads"
 
-        elif (
-            "available" in lower_question
-            or "availability" in lower_question
-        ):
+        elif "available" in lower_question or "availability" in lower_question:
             requested_tool = "available_players"
 
         for _ in range(MAX_TOOL_ITERATIONS):
@@ -131,10 +127,7 @@ class FootballAgent:
 
             if not tool_calls:
                 if requested_tool is not None:
-                    raise RuntimeError(
-                        f"Agent did not call required tool: "
-                        f"{requested_tool}"
-                    )
+                    raise RuntimeError(f"Agent did not call required tool: {requested_tool}")
 
                 return response.message.content or ""
 
@@ -156,11 +149,13 @@ class FootballAgent:
 
                 data = extract_tool_result(result)
 
-                self.messages.append({
-                    "role": "tool",
-                    "tool_name": name,
-                    "content": json.dumps(data, default=str),
-                })
+                self.messages.append(
+                    {
+                        "role": "tool",
+                        "tool_name": name,
+                        "content": json.dumps(data, default=str),
+                    }
+                )
 
                 if name == "generate_match_squads":
                     validate_squads(data)
@@ -174,19 +169,16 @@ class FootballAgent:
 
                 # Only finish when the requested tool has
                 # actually produced the requested result.
-                if formatted is not None and (
-                    requested_tool is None
-                    or requested_tool == name
-                ):
+                if formatted is not None and (requested_tool is None or requested_tool == name):
                     final_output = formatted
 
             if final_output is not None:
-                self.messages.append({
-                    "role": "assistant",
-                    "content": final_output,
-                })
+                self.messages.append(
+                    {
+                        "role": "assistant",
+                        "content": final_output,
+                    }
+                )
                 return final_output
 
-        raise RuntimeError(
-            f"Agent exceeded {MAX_TOOL_ITERATIONS} iterations"
-        )
+        raise RuntimeError(f"Agent exceeded {MAX_TOOL_ITERATIONS} iterations")

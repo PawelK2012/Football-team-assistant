@@ -1,4 +1,3 @@
-
 import asyncio
 
 from mcp import ClientSession, StdioServerParameters
@@ -25,10 +24,7 @@ async def run_agent():
             await session.initialize()
 
             discovered = await session.list_tools()
-            tools = [
-                to_ollama_tool(tool)
-                for tool in discovered.tools
-            ]
+            tools = [to_ollama_tool(tool) for tool in discovered.tools]
 
             agent = FootballAgent(
                 ollama=AsyncClient(),
@@ -59,10 +55,7 @@ async def run_agent():
                     print(f"\nAssistant:\n{answer}")
 
                 except Exception as error:
-                    print(
-                        f"\n[AGENT ERROR] "
-                        f"{type(error).__name__}: {error}"
-                    )
+                    print(f"\n[AGENT ERROR] {type(error).__name__}: {error}")
 
 
 if __name__ == "__main__":
