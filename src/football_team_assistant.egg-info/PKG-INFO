@@ -13,30 +13,23 @@ Requires-Dist: uvicorn[standard]
 
 ### Football team assistant
 
-finished at 1. Create API models
-
 ## High level architecture 
 
 
 `````
-main.py
-   │
-   │ user interaction
-   ▼
-agent.py
-   │
-   │ LLM reasoning + tool execution
-   ▼
-tools.py
-   │
-   │ application capabilities
-   ▼
-squad_optimizer.py
-   │
-   │ deterministic business logic
-   ▼
-data.py
-     in-memory data
+Coach
+  ↓
+Qwen (Ollama)
+  ↓
+MCP Client
+  ↓
+MCP Server
+  ↓
+Match Service
+  ↓
+Repositories + Optimizer
+  ↓
+PostgreSQL
 `````
 ## AI Agent flow
 Needs update
@@ -73,6 +66,25 @@ Qwen (LLM)
            │
            ▼
     natural-language answer
+`````
+
+## Structure
+
+`````
+src/football_team_assistant/
+├── mcp_agent.py          # CLI entry point
+├── football_agent.py     # Agent orchestration
+├── mcp_client.py         # Existing tool conversion
+├── formatters.py         # Existing formatting and validation
+├── mcp_server/
+│   └── server.py
+└── ...
+
+tests/
+├── test_formatters.py
+├── test_squad_validation.py
+├── test_mcp_agent.py
+└── test_football_agent.py
 `````
 
 ## Test

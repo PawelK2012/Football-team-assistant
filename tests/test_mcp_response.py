@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from football_team_assistant.mcp_agent import extract_tool_result
+from football_team_assistant.football_agent import extract_tool_result
 
 
 def make_result(
