@@ -106,4 +106,3 @@ def sample_squads():
         "average_rating_b": 5.75,
         "balance_difference": 0.75,
     }
-
