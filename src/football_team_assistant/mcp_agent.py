@@ -7,118 +7,83 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from ollama import AsyncClient
 
+from football_team_assistant.formatters import (
+    format_available_players,
+    format_squads,
+    validate_squads,
+)
 from football_team_assistant.mcp_client import to_ollama_tool
 
 MODEL = "qwen3:8b"
+MAX_TOOL_ITERATIONS = 10
 
 today = datetime.now(ZoneInfo("Europe/Dublin")).date()
 
 SYSTEM_PROMPT = f"""
 You are an AI football team assistant for Trinity Donaghmede FC U8.
 
-You assist the team's coach with:
-- Football fixtures
-- Player availability
-- Balanced squad generation
-- Goalkeeper rotation
+Today's date is {today}.
+All fixture dates use YYYY-MM-DD format.
 
-CURRENT CONTEXT
-- Team: Trinity Donaghmede FC U8
-- Today's date: {today}
-- All fixture dates use the YYYY-MM-DD format.
-- The opponent field identifies the opposing team.
-- A fixture with home=true is a home match.
-- A fixture with home=false is an away match.
+Your responsibilities:
+- Answer questions about fixtures.
+- Retrieve player availability.
+- Generate balanced match squads.
+- Help the coach understand football data.
 
 TOOL USAGE
-- Always use MCP tools to retrieve football data.
+- Always use MCP tools for football data.
 - Never invent fixtures, players, ratings, or goalkeeper history.
 - Use only arguments defined in each tool's schema.
-- Never invent tool parameters.
-- If a tool returns an error, explain the error accurately.
-- Never claim a tool failed when it returned valid data.
-- Do not assume data is missing unless the tool confirms it.
+- The fixtures tool accepts no arguments.
+- Never generate squads yourself.
+- Always use generate_match_squads for squad generation.
+- Never modify tool results.
+- If a tool fails, report the error accurately.
 
 FIXTURES
-- Use the fixtures tool to retrieve fixtures.
-- The fixtures tool accepts no arguments.
-- When asked about the next fixture:
-  1. Retrieve all fixtures.
-  2. Ignore fixtures dated before today.
-  3. Select the earliest upcoming fixture.
-- Never assume the first returned fixture is the next match.
-- Never claim the team is playing against itself unless
-  the opponent is explicitly Trinity Donaghmede FC.
+- The opponent field identifies the opposing team.
+- home=true means a home match.
+- home=false means an away match.
+- To find the next fixture, retrieve fixtures and select
+  the earliest fixture on or after today's date.
+- Never claim the team plays itself unless the opponent
+  is explicitly Trinity Donaghmede FC.
 
 PLAYER AVAILABILITY
 - Use available_players with the correct fixture_id.
-- Display only players returned by the tool.
-- Preserve player names and ratings exactly.
-- Report goalkeeper eligibility only when explicitly
-  provided by the tool.
-- Never assume that every player can play goalkeeper.
-- Do not invent unavailable players.
+- Do not invent or omit players.
+- Report goalkeeper eligibility only if supplied.
 
 SQUAD GENERATION
-- Always use generate_match_squads to create squads.
-- Never generate or rebalance squads yourself.
-- Never modify squad assignments returned by the tool.
-- Preserve goalkeeper selections exactly.
-- Preserve average ratings and balance differences.
-- Every player returned by the tool must appear exactly
-  once in the squad lists.
-- Goalkeepers are already included in their squad's
-  player list. Never count or list them twice.
-- Do not invent missing players or placeholders.
-- Do not claim the response is incomplete unless the
-  tool explicitly reports missing data.
-- Distinguish starting players and substitutes only
-  when explicitly identified by the tool.
-- Never invent positions, formations, or substitutions.
+- Use generate_match_squads with the correct fixture_id.
+- Never rebalance squads yourself.
+- Preserve all player assignments and goalkeeper selections.
+- Goalkeepers are already included in their squad lists.
+- Never count a goalkeeper twice.
+- Do not invent substitutions or positions.
 
-CONVERSATION CONTEXT
-- Maintain context across the conversation.
-- Resolve references such as:
-  "that match"
-  "the next fixture"
-  "those players"
-  "generate squads for it"
-- Reuse the fixture_id from previous tool results
-  when the referenced fixture is unambiguous.
-- If the fixture cannot be identified, retrieve
-  fixtures or ask the coach for clarification.
-- Do not assume the most recently mentioned fixture
-  is always the intended fixture.
-
-RESPONSE ACCURACY
-- Treat MCP tool results as the authoritative source
-  for football data.
-- Never invent facts to make an answer sound complete.
-- Do not recalculate ratings returned by the optimizer.
-- Do not speculate about data errors without evidence.
-- If information is unavailable, clearly say so.
-- Do not expose internal implementation details unless
-  the coach asks about them.
+CONVERSATION
+- Maintain context across questions.
+- Resolve references such as "that match" or "those squads".
+- Retrieve fixtures if the intended fixture is unclear.
+- Ask for clarification if multiple fixtures match.
 
 RESPONSE STYLE
-- Be concise, accurate, and practical.
-- Use clear player names and readable squad lists.
-- Show fixture dates, opponents, and home/away status.
-- For squads, show:
-  - Fixture details
-  - Squad A with all players
-  - Squad A goalkeeper
-  - Squad A average rating
-  - Squad B with all players
-  - Squad B goalkeeper
-  - Squad B average rating
-  - Balance difference
-- Do not repeat goalkeepers when displaying player lists.
-- Avoid unnecessary commentary and speculation.
+- Be concise and accurate.
+- Never speculate about data errors without evidence.
+- Python handles exact player lists and squad formatting.
+- Do not reconstruct player lists from memory.
+
+When the coach requests squads, call generate_match_squads.
+You do not need to call available_players first because
+generate_match_squads retrieves the required player data.
 """
 
 
 def extract_tool_result(result):
+    """Normalize structured and text-based MCP responses."""
+
     if result.is_error:
         error_message = " ".join(item.text for item in result.content if item.type == "text")
         raise RuntimeError(error_message or "MCP tool failed")
@@ -185,6 +150,7 @@ async def run_agent():
                     break
 
                 if user_input.lower() in {"quit", "exit"}:
+                    print("Goodbye!")
                     break
 
                 if not user_input:
@@ -197,8 +163,10 @@ async def run_agent():
                     }
                 )
 
-                # Allow multiple tool calls within one conversation turn.
-                for _ in range(10):
+                # Process the user's request.
+                # MAX_TOOL_ITERATIONS is a safety limit to prevent agent from getting stuck
+                # in an infinite tool-calling loop.
+                for _ in range(MAX_TOOL_ITERATIONS):
                     try:
                         response = await ollama.chat(
                             model=MODEL,
@@ -220,6 +188,10 @@ async def run_agent():
                         )
                         break
 
+                    formatted_output = None
+                    tool_failed = False
+
+                    # Execute all requested MCP tool calls.
                     for tool_call in tool_calls:
                         name = tool_call.function.name
                         arguments = tool_call.function.arguments or {}
@@ -235,20 +207,11 @@ async def run_agent():
                                 arguments=arguments,
                             )
 
-                            # Debug the complete structured response.
-                            print(
-                                "[MCP RAW RESULT]",
-                                json.dumps(
-                                    result.structured_content,
-                                    indent=2,
-                                    default=str,
-                                ),
-                            )
-
                             tool_result = extract_tool_result(result)
 
+                            # Keep debug logging for development.
                             print(
-                                "[OLLAMA] Sending tool result:",
+                                "[MCP RESULT]",
                                 json.dumps(
                                     tool_result,
                                     indent=2,
@@ -256,11 +219,24 @@ async def run_agent():
                                 ),
                             )
 
+                            # Format structured data in Python.
+                            # Do not ask the LLM to recreate these lists.
+                            if name == "generate_match_squads":
+                                validate_squads(tool_result)
+                                formatted_output = format_squads(tool_result)
+
+                            elif name == "available_players":
+                                formatted_output = format_available_players(tool_result)
+
                         except Exception as error:
                             print(f"[MCP ERROR] {type(error).__name__}: {error}")
 
                             tool_result = {"error": str(error)}
+                            tool_failed = True
+                            formatted_output = None
 
+                        # Always record the tool response so the LLM
+                        # can maintain conversation context.
                         messages.append(
                             {
                                 "role": "tool",
@@ -272,8 +248,28 @@ async def run_agent():
                             }
                         )
 
+                    # If a structured result is available, display
+                    # the verified Python output directly.
+                    if formatted_output is not None and not tool_failed:
+                        print("\nAssistant:\n")
+                        print(formatted_output)
+
+                        # Record the actual answer in conversation
+                        # history for follow-up questions.
+                        messages.append(
+                            {
+                                "role": "assistant",
+                                "content": formatted_output,
+                            }
+                        )
+                        break
+
+                    # Otherwise continue the LLM loop.
+                    # This allows chained calls, for example:
+                    # fixtures -> available_players.
+
                 else:
-                    print("[AGENT] Maximum tool-call iterations reached.")
+                    raise RuntimeError(f"Agent exceeded {MAX_TOOL_ITERATIONS} tool iterations")
 
 
 if __name__ == "__main__":

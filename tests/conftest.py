@@ -45,3 +45,64 @@ def clean_database():
             )
 
     yield
+
+
+@pytest.fixture
+def sample_squads():
+    return {
+        "fixture": {
+            "id": 6,
+            "date": "2026-11-08",
+            "opponent": "Verona FC",
+            "home": True,
+        },
+        "squad_a": [
+            {
+                "id": 1,
+                "name": "Henry",
+                "rating": 4.5,
+                "can_play_goalkeeper": True,
+            },
+            {
+                "id": 2,
+                "name": "Sam",
+                "rating": 4.5,
+                "can_play_goalkeeper": True,
+            },
+            {
+                "id": 3,
+                "name": "Jack",
+                "rating": 6.0,
+                "can_play_goalkeeper": True,
+            },
+        ],
+        "squad_b": [
+            {
+                "id": 7,
+                "name": "Tom",
+                "rating": 6.0,
+                "can_play_goalkeeper": True,
+            },
+            {
+                "id": 8,
+                "name": "Aron",
+                "rating": 5.5,
+                "can_play_goalkeeper": True,
+            },
+        ],
+        "goalkeeper_a": {
+            "id": 3,
+            "name": "Jack",
+            "rating": 6.0,
+            "can_play_goalkeeper": True,
+        },
+        "goalkeeper_b": {
+            "id": 7,
+            "name": "Tom",
+            "rating": 6.0,
+            "can_play_goalkeeper": True,
+        },
+        "average_rating_a": 5.0,
+        "average_rating_b": 5.75,
+        "balance_difference": 0.75,
+    }
