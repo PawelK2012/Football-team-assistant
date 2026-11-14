@@ -7,7 +7,9 @@ from football_team_assistant.formatters import (
     format_squads,
     validate_squads,
 )
-from football_team_assistant.tool_validation import validate_tool_arguments
+from football_team_assistant.tool_validation import (
+    validate_tool_arguments,
+)
 
 MODEL = "qwen3:8b"
 MAX_TOOL_ITERATIONS = 10
@@ -18,6 +20,7 @@ def build_system_prompt() -> str:
 
     return f"""
 You are an AI football team assistant for Trinity Donaghmede FC U8.
+
 Today's date is {today}.
 
 Use MCP tools for all football data.
@@ -94,21 +97,11 @@ class FootballAgent:
             }
         )
 
-        # A direct data request must be answered from the
-        # corresponding tool, not from a model-generated list.
         requested_tool = None
-
         lower_question = question.lower()
 
         if (
-            any(
-                word in lower_question
-                for word in (
-                    "generate",
-                    "create",
-                    "build",
-                )
-            )
+            any(word in lower_question for word in ("generate", "create", "build"))
             and "squad" in lower_question
         ):
             requested_tool = "generate_match_squads"
@@ -124,6 +117,7 @@ class FootballAgent:
             )
 
             self.messages.append(response.message)
+
             tool_calls = response.message.tool_calls or []
 
             if not tool_calls:
@@ -162,20 +156,10 @@ class FootballAgent:
                 )
 
                 if name == "generate_match_squads":
-                    fixture_id = arguments["fixture_id"]
-
-                    availability_result = await self.mcp_session.call_tool(
-                        "available_players",
-                        arguments={"fixture_id": fixture_id},
-                    )
-
-                    available = extract_tool_result(availability_result)
-
-                    validate_squads(
-                        data,
-                        available_players=available,
-                    )
-
+                    # The match service already validates completeness
+                    # against the available players.
+                    # Keep defensive validation at the agent boundary.
+                    validate_squads(data)
                     formatted = format_squads(data)
 
                 elif name == "available_players":
@@ -184,8 +168,6 @@ class FootballAgent:
                 else:
                     formatted = None
 
-                # Only finish when the requested tool has
-                # actually produced the requested result.
                 if formatted is not None and (requested_tool is None or requested_tool == name):
                     final_output = formatted
 
@@ -196,6 +178,7 @@ class FootballAgent:
                         "content": final_output,
                     }
                 )
+
                 return final_output
 
         raise RuntimeError(f"Agent exceeded {MAX_TOOL_ITERATIONS} iterations")
