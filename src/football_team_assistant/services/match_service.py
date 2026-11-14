@@ -1,3 +1,4 @@
+from football_team_assistant.formatters import validate_squads
 from football_team_assistant.repositories.fixture_repository import (
     get_fixture,
 )
@@ -28,7 +29,14 @@ def create_match_squads(
         goalkeeper_history,
     )
 
-    return {
+    result = {
         "fixture": fixture,
         **squads,
     }
+
+    validate_squads(
+        result,
+        available_players=available_players,
+    )
+
+    return result
