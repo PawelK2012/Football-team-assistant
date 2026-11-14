@@ -63,10 +63,7 @@ def test_unbalanced_squad_sizes(sample_squads):
 
 
 def test_all_available_players_assigned(sample_squads):
-    available = (
-        sample_squads["squad_a"]
-        + sample_squads["squad_b"]
-    )
+    available = sample_squads["squad_a"] + sample_squads["squad_b"]
 
     validate_squads(sample_squads, available)
 
@@ -85,15 +82,9 @@ def test_missing_available_player(sample_squads):
 def test_unexpected_player(sample_squads):
     data = copy.deepcopy(sample_squads)
 
-    available = (
-        data["squad_a"]
-        + data["squad_b"]
-    )
+    available = data["squad_a"] + data["squad_b"]
 
-    available = [
-        player for player in available
-        if player["id"] != data["squad_a"][0]["id"]
-    ]
+    available = [player for player in available if player["id"] != data["squad_a"][0]["id"]]
 
     with pytest.raises(ValueError, match="Unexpected players"):
         validate_squads(data, available)
