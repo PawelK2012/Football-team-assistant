@@ -125,6 +125,7 @@ async def test_squad_generation_uses_exact_tool_data(
     agent.mcp_session.call_tool.side_effect = [
         mcp_result(fixtures),
         mcp_result(sample_squads),
+        mcp_result(sample_squads["squad_a"] + sample_squads["squad_b"]),
     ]
 
     answer = await agent.ask("Generate two balanced squads for Verona FC")
@@ -138,7 +139,7 @@ async def test_squad_generation_uses_exact_tool_data(
     assert "Goalkeeper: Johny" in answer
     assert "Goalkeeper: Diebre" in answer
 
-    assert agent.mcp_session.call_tool.await_count == 2
+    assert agent.mcp_session.call_tool.await_count == 3
 
     assert "3. Orangutan (6.0) (GK)" in answer
     assert "1. MBape (6.0) (GK)" in answer

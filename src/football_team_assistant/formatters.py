@@ -41,7 +41,10 @@ def format_squads(data: dict) -> str:
     return "\n".join(lines)
 
 
-def validate_squads(data: dict) -> None:
+def validate_squads(
+    data: dict,
+    available_players: list[dict] | None = None,
+) -> None:
     squad_a = data["squad_a"]
     squad_b = data["squad_b"]
 
@@ -57,8 +60,33 @@ def validate_squads(data: dict) -> None:
     for label, squad in (("a", squad_a), ("b", squad_b)):
         goalkeeper = data[f"goalkeeper_{label}"]
 
-        if goalkeeper["id"] not in {player["id"] for player in squad}:
-            raise ValueError(f"Goalkeeper missing from Squad {label.upper()}")
+        if goalkeeper["id"] not in {
+            player["id"] for player in squad
+        }:
+            raise ValueError(
+                f"Goalkeeper missing from Squad {label.upper()}"
+            )
 
         if not goalkeeper["can_play_goalkeeper"]:
-            raise ValueError(f"Ineligible goalkeeper in Squad {label.upper()}")
+            raise ValueError(
+                f"Ineligible goalkeeper in Squad {label.upper()}"
+            )
+
+    if available_players is not None:
+        expected_ids = {
+            player["id"] for player in available_players
+        }
+        actual_ids = set(player_ids)
+
+        missing = expected_ids - actual_ids
+        unexpected = actual_ids - expected_ids
+
+        if missing:
+            raise ValueError(
+                f"Players missing from squads: {sorted(missing)}"
+            )
+
+        if unexpected:
+            raise ValueError(
+                f"Unexpected players in squads: {sorted(unexpected)}"
+            )
