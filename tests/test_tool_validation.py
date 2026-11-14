@@ -4,7 +4,6 @@ from football_team_assistant.tool_validation import (
     validate_tool_arguments,
 )
 
-
 TOOLS = [
     {
         "type": "function",
@@ -12,16 +11,8 @@ TOOLS = [
             "name": name,
             "parameters": {
                 "type": "object",
-                "properties": (
-                    {}
-                    if name == "fixtures"
-                    else {"fixture_id": {"type": "integer"}}
-                ),
-                "required": (
-                    []
-                    if name == "fixtures"
-                    else ["fixture_id"]
-                ),
+                "properties": ({} if name == "fixtures" else {"fixture_id": {"type": "integer"}}),
+                "required": ([] if name == "fixtures" else ["fixture_id"]),
             },
         },
     }

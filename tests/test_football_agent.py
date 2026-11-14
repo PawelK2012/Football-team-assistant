@@ -76,9 +76,9 @@ async def test_availability_uses_exact_tool_data(agent):
     ]
 
     players = [
-        {"id": 1, "name": "Henry", "rating": 4.5},
-        {"id": 13, "name": "Cuan", "rating": 3.5},
-        {"id": 14, "name": "Leo", "rating": 5.0},
+        {"id": 1, "name": "MrX", "rating": 4.5},
+        {"id": 13, "name": "MrY", "rating": 3.5},
+        {"id": 14, "name": "Orangutan", "rating": 5.0},
     ]
 
     agent.ollama.chat.side_effect = [
@@ -93,12 +93,12 @@ async def test_availability_uses_exact_tool_data(agent):
 
     answer = await agent.ask("Who is available for the next match?")
 
-    assert "1. Henry (4.5)" in answer
-    assert "2. Cuan (3.5)" in answer
-    assert "3. Leo (5.0)" in answer
+    assert "1. MrX (4.5)" in answer
+    assert "2. MrY (3.5)" in answer
+    assert "3. Orangutan (5.0)" in answer
 
-    assert answer.count("Henry") == 1
-    assert answer.count("Cuan") == 1
+    assert answer.count("MrX") == 1
+    assert answer.count("MrY") == 1
 
     assert agent.mcp_session.call_tool.await_count == 2
 
@@ -132,13 +132,16 @@ async def test_squad_generation_uses_exact_tool_data(
     assert "Squad A" in answer
     assert "Squad B" in answer
 
-    assert answer.count("Henry") == 1
-    assert answer.count("Sam") == 1
+    assert answer.count("MrX") == 1
+    assert answer.count("Orangutan") == 1
 
-    assert "Goalkeeper: Jack" in answer
-    assert "Goalkeeper: Tom" in answer
+    assert "Goalkeeper: Johny" in answer
+    assert "Goalkeeper: Diebre" in answer
 
     assert agent.mcp_session.call_tool.await_count == 2
+
+    assert "3. Orangutan (6.0) (GK)" in answer
+    assert "1. MBape (6.0) (GK)" in answer
 
 
 @pytest.mark.asyncio
@@ -191,6 +194,7 @@ async def test_agent_iteration_limit(agent, monkeypatch):
         await agent.ask("Find fixtures")
 
     assert agent.ollama.chat.await_count == 3
+
 
 @pytest.mark.asyncio
 async def test_invalid_arguments_never_reach_mcp(agent):

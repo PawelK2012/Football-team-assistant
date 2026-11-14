@@ -59,19 +59,19 @@ def sample_squads():
         "squad_a": [
             {
                 "id": 1,
-                "name": "Henry",
+                "name": "MrX",
                 "rating": 4.5,
                 "can_play_goalkeeper": True,
             },
             {
                 "id": 2,
-                "name": "Sam",
+                "name": "MrY",
                 "rating": 4.5,
                 "can_play_goalkeeper": True,
             },
             {
                 "id": 3,
-                "name": "Jack",
+                "name": "Orangutan",
                 "rating": 6.0,
                 "can_play_goalkeeper": True,
             },
@@ -79,26 +79,26 @@ def sample_squads():
         "squad_b": [
             {
                 "id": 7,
-                "name": "Tom",
+                "name": "MBape",
                 "rating": 6.0,
                 "can_play_goalkeeper": True,
             },
             {
                 "id": 8,
-                "name": "Aron",
+                "name": "Adele",
                 "rating": 5.5,
                 "can_play_goalkeeper": True,
             },
         ],
         "goalkeeper_a": {
             "id": 3,
-            "name": "Jack",
+            "name": "Johny",
             "rating": 6.0,
             "can_play_goalkeeper": True,
         },
         "goalkeeper_b": {
             "id": 7,
-            "name": "Tom",
+            "name": "Diebre",
             "rating": 6.0,
             "can_play_goalkeeper": True,
         },

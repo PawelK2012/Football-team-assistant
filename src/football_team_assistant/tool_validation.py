@@ -7,11 +7,7 @@ def validate_tool_arguments(
     tools: list[dict],
 ) -> None:
     tool = next(
-        (
-            tool
-            for tool in tools
-            if tool["function"]["name"] == name
-        ),
+        (tool for tool in tools if tool["function"]["name"] == name),
         None,
     )
 
@@ -28,6 +24,4 @@ def validate_tool_arguments(
     try:
         Draft202012Validator(schema).validate(arguments)
     except ValidationError as error:
-        raise ValueError(
-            f"Invalid arguments for {name}: {error.message}"
-        ) from error
+        raise ValueError(f"Invalid arguments for {name}: {error.message}") from error

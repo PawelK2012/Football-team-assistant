@@ -7,7 +7,6 @@ from football_team_assistant.formatters import (
     format_squads,
     validate_squads,
 )
-
 from football_team_assistant.tool_validation import validate_tool_arguments
 
 MODEL = "qwen3:8b"
