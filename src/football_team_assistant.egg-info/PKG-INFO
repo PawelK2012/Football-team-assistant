@@ -16,7 +16,6 @@ Requires-Dist: uvicorn[standard]
 
 ## High level architecture 
 
-No production code changes are needed for this error.
 
 `````
 Coach

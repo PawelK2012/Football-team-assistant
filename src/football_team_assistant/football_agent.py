@@ -43,6 +43,11 @@ For squad generation:
 - Goalkeepers are already included in squad player lists.
 - You do not need to call available_players before generating squads.
 
+For follow-up questions:
+- Reuse the currently selected fixture unless the coach specifies another.
+- Never invent a fixture ID.
+- When the coach selects a different opponent, retrieve fixtures to resolve its ID.
+
 Python handles exact player lists and squad formatting.
 Never reconstruct player lists from memory.
 
@@ -82,6 +87,8 @@ class FootballAgent:
 
         self.tool_names = {tool["function"]["name"] for tool in tools}
 
+        self.current_fixture_id: int | None = None
+
         self.messages = [
             {
                 "role": "system",
@@ -110,9 +117,25 @@ class FootballAgent:
             requested_tool = "available_players"
 
         for _ in range(MAX_TOOL_ITERATIONS):
+            messages = list(self.messages)
+
+            if self.current_fixture_id is not None:
+                messages.append(
+                    {
+                        "role": "system",
+                        "content": (
+                            "Current selected fixture ID: "
+                            f"{self.current_fixture_id}. "
+                            "Use this fixture for follow-up questions "
+                            "unless the coach explicitly selects "
+                            "another fixture."
+                        ),
+                    }
+                )
+
             response = await self.ollama.chat(
                 model=MODEL,
-                messages=self.messages,
+                messages=messages,
                 tools=self.tools,
             )
 
@@ -122,7 +145,48 @@ class FootballAgent:
 
             if not tool_calls:
                 if requested_tool is not None:
-                    raise RuntimeError(f"Agent did not call required tool: {requested_tool}")
+                    if self.current_fixture_id is None:
+                        raise RuntimeError("No fixture selected. Please specify a fixture.")
+
+                    arguments = {"fixture_id": self.current_fixture_id}
+
+                    validate_tool_arguments(
+                        name=requested_tool,
+                        arguments=arguments,
+                        tools=self.tools,
+                    )
+
+                    print(f"[MCP] Fallback calling {requested_tool}: {arguments}")
+
+                    result = await self.mcp_session.call_tool(
+                        requested_tool,
+                        arguments=arguments,
+                    )
+
+                    data = extract_tool_result(result)
+
+                    self.messages.append(
+                        {
+                            "role": "tool",
+                            "tool_name": requested_tool,
+                            "content": json.dumps(data, default=str),
+                        }
+                    )
+
+                    if requested_tool == "available_players":
+                        formatted = format_available_players(data)
+                    else:
+                        validate_squads(data)
+                        formatted = format_squads(data)
+
+                    self.messages.append(
+                        {
+                            "role": "assistant",
+                            "content": formatted,
+                        }
+                    )
+
+                    return formatted
 
                 return response.message.content or ""
 
@@ -147,6 +211,12 @@ class FootballAgent:
 
                 data = extract_tool_result(result)
 
+                if name in {
+                    "available_players",
+                    "generate_match_squads",
+                }:
+                    self.current_fixture_id = arguments["fixture_id"]
+
                 self.messages.append(
                     {
                         "role": "tool",
@@ -156,9 +226,8 @@ class FootballAgent:
                 )
 
                 if name == "generate_match_squads":
-                    # The match service already validates completeness
-                    # against the available players.
-                    # Keep defensive validation at the agent boundary.
+                    # Completeness is validated by match_service.py.
+                    # Retain defensive checks at the agent boundary.
                     validate_squads(data)
                     formatted = format_squads(data)
 
