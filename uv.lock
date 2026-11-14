@@ -355,6 +355,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "jsonschema" },
     { name = "mcp", extra = ["cli"] },
     { name = "ollama" },
     { name = "psycopg", extra = ["binary"] },
@@ -373,6 +374,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi" },
+    { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "mcp", extras = ["cli"] },
     { name = "ollama", specifier = ">=0.6,<1" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2,<4" },

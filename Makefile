@@ -31,4 +31,4 @@ format:
 	$(UV) run ruff format .
 
 db:
-	docker compose up -d postgres
+	docker compose up -d

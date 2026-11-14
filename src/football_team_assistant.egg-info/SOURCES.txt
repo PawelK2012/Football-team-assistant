@@ -36,6 +36,6 @@ src/football_team_assistant/services/__init__.py
 src/football_team_assistant/services/match_service.py
 tests/test_football_agent.py
 tests/test_formatters.py
-tests/test_mcp_agent.py
+tests/test_mcp_response.py
 tests/test_squad_optimizer.py
 tests/test_squad_validation.py

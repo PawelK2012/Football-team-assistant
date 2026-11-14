@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi",
+    "jsonschema>=4.26.0",
     "mcp[cli]",
     "ollama>=0.6,<1",
     "psycopg[binary]>=3.2,<4",

@@ -191,3 +191,14 @@ async def test_agent_iteration_limit(agent, monkeypatch):
         await agent.ask("Find fixtures")
 
     assert agent.ollama.chat.await_count == 3
+
+@pytest.mark.asyncio
+async def test_invalid_arguments_never_reach_mcp(agent):
+    agent.ollama.chat.return_value = model_response(
+        tool_call("available_players", fixture_id="six")
+    )
+
+    with pytest.raises(ValueError, match="Invalid arguments"):
+        await agent.ask("Who is available?")
+
+    agent.mcp_session.call_tool.assert_not_awaited()
