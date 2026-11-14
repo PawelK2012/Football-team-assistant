@@ -162,7 +162,20 @@ class FootballAgent:
                 )
 
                 if name == "generate_match_squads":
-                    validate_squads(data)
+                    fixture_id = arguments["fixture_id"]
+
+                    availability_result = await self.mcp_session.call_tool(
+                        "available_players",
+                        arguments={"fixture_id": fixture_id},
+                    )
+
+                    available = extract_tool_result(availability_result)
+
+                    validate_squads(
+                        data,
+                        available_players=available,
+                    )
+
                     formatted = format_squads(data)
 
                 elif name == "available_players":
