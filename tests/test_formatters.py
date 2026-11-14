@@ -45,10 +45,10 @@ def test_squad_formatting(sample_squads):
     assert "Squad A (3 players)" in output
     assert "Squad B (2 players)" in output
 
-    assert "Goalkeeper: Jack" in output
-    assert "Goalkeeper: Tom" in output
+    assert "Goalkeeper: Johny" in output
+    assert "Goalkeeper: Diebre" in output
 
-    assert "Jack (6.0) (GK)" in output
-    assert "Tom (6.0) (GK)" in output
+    assert "MBape (6.0) (GK)" in output
+    assert "Orangutan (6.0) (GK)" in output
 
     assert "Balance difference: 0.75" in output

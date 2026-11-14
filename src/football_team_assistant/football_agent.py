@@ -7,6 +7,7 @@ from football_team_assistant.formatters import (
     format_squads,
     validate_squads,
 )
+from football_team_assistant.tool_validation import validate_tool_arguments
 
 MODEL = "qwen3:8b"
 MAX_TOOL_ITERATIONS = 10
@@ -137,8 +138,11 @@ class FootballAgent:
                 name = call.function.name
                 arguments = call.function.arguments or {}
 
-                if name not in self.tool_names:
-                    raise ValueError(f"Unknown tool: {name}")
+                validate_tool_arguments(
+                    name=name,
+                    arguments=arguments,
+                    tools=self.tools,
+                )
 
                 print(f"[MCP] Calling {name}: {arguments}")
 
