@@ -3,6 +3,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from football_team_assistant.fixture_resolution import (
+    extract_explicit_fixture_id,
+)
 from football_team_assistant.football_agent import FootballAgent
 
 TOOLS = [
@@ -82,7 +85,6 @@ async def test_availability_uses_exact_tool_data(agent):
     ]
 
     agent.ollama.chat.side_effect = [
-        model_response(tool_call("fixtures")),
         model_response(tool_call("available_players", fixture_id=6)),
     ]
 
@@ -91,7 +93,7 @@ async def test_availability_uses_exact_tool_data(agent):
         mcp_result(players),
     ]
 
-    answer = await agent.ask("Who is available for the next match?")
+    answer = await agent.ask("Who is available for fixture 6?")
 
     assert "1. MrX (4.5)" in answer
     assert "2. MrY (3.5)" in answer
@@ -101,6 +103,67 @@ async def test_availability_uses_exact_tool_data(agent):
     assert answer.count("MrY") == 1
 
     assert agent.mcp_session.call_tool.await_count == 2
+
+
+@pytest.fixture(params=[False, True], ids=["model-call", "fallback"])
+def availability_agent(agent: FootballAgent, request: pytest.FixtureRequest) -> FootballAgent:
+    if request.param:
+        agent.ollama.chat.return_value = model_response()
+    else:
+        agent.ollama.chat.return_value = model_response(
+            tool_call("available_players", fixture_id=6)
+        )
+    return agent
+
+
+@pytest.fixture
+def availability_fixtures() -> list[dict]:
+    return [{"id": 6, "date": "2026-11-08", "opponent": "Verona FC", "home": True}]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "payload, expected_error",
+    [
+        pytest.param({"status": "unexpected"}, "expected a list", id="not-a-list"),
+        pytest.param(["MrX"], "expected a player record", id="not-a-player-record"),
+        pytest.param([{"rating": 4.5}], "missing name", id="missing-name"),
+        pytest.param([{"name": "MrX"}], "missing rating", id="missing-rating"),
+    ],
+)
+async def test_availability_rejects_malformed_tool_result(
+    availability_agent: FootballAgent,
+    availability_fixtures: list[dict],
+    payload: object,
+    expected_error: str,
+) -> None:
+    availability_agent.mcp_session.call_tool.side_effect = [
+        mcp_result(availability_fixtures),
+        mcp_result(payload),
+    ]
+    with pytest.raises(ValueError, match=f"available_players.*{expected_error}"):
+        await availability_agent.ask("Who is available for fixture 6?")
+
+    assert not any(
+        isinstance(message, dict)
+        and message.get("role") == "tool"
+        and message.get("tool_name") == "available_players"
+        for message in availability_agent.messages
+    )
+
+
+@pytest.mark.asyncio
+async def test_availability_accepts_empty_player_list(
+    availability_agent: FootballAgent, availability_fixtures: list[dict]
+) -> None:
+    availability_agent.mcp_session.call_tool.side_effect = [
+        mcp_result(availability_fixtures),
+        mcp_result([]),
+    ]
+
+    answer = await availability_agent.ask("Who is available for fixture 6?")
+
+    assert answer.strip() == "Available players (0):"
 
 
 @pytest.mark.asyncio
@@ -118,7 +181,6 @@ async def test_squad_generation_uses_exact_tool_data(
     ]
 
     agent.ollama.chat.side_effect = [
-        model_response(tool_call("fixtures")),
         model_response(tool_call("generate_match_squads", fixture_id=6)),
     ]
 
@@ -198,11 +260,43 @@ async def test_agent_iteration_limit(agent, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_invalid_arguments_never_reach_mcp(agent):
+    fixtures = [
+        {
+            "id": 6,
+            "date": "2026-11-08",
+            "opponent": "Verona FC",
+            "home": True,
+        }
+    ]
+
+    agent.mcp_session.call_tool.return_value = mcp_result(fixtures)
+
     agent.ollama.chat.return_value = model_response(
-        tool_call("available_players", fixture_id="six")
+        tool_call(
+            "available_players",
+            fixture_id="six",
+            unexpected_argument=True,
+        )
     )
 
     with pytest.raises(ValueError, match="Invalid arguments"):
-        await agent.ask("Who is available?")
+        await agent.ask("Who is available for fixture 6?")
 
-    agent.mcp_session.call_tool.assert_not_awaited()
+    # Fixture discovery is allowed, but invalid tool execution isn't.
+    assert agent.mcp_session.call_tool.await_count == 1
+    assert agent.mcp_session.call_tool.await_args.args[0] == "fixtures"
+
+
+@pytest.mark.parametrize(
+    "question, expected",
+    [
+        ("Who is available for fixture 6?", 6),
+        ("Generate squads for fixture ID 7", 7),
+        ("Show fixture #12", 12),
+        ("Generate squads", None),
+        ("Who is available?", None),
+        ("We have 14 players", None),
+    ],
+)
+def test_extract_explicit_fixture_id(question, expected):
+    assert extract_explicit_fixture_id(question) == expected
