@@ -2,6 +2,9 @@ import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from football_team_assistant.fixture_resolution import (
+    resolve_fixture,
+)
 from football_team_assistant.formatters import (
     format_available_players,
     format_squads,
@@ -13,6 +16,11 @@ from football_team_assistant.tool_validation import (
 
 MODEL = "qwen3:8b"
 MAX_TOOL_ITERATIONS = 10
+
+FIXTURE_TOOLS = {
+    "available_players",
+    "generate_match_squads",
+}
 
 
 def build_system_prompt() -> str:
@@ -33,6 +41,7 @@ The opponent field identifies the opposing team.
 For the next fixture:
 - Retrieve fixtures.
 - Select the earliest fixture on or after today.
+- Do not describe past fixtures as upcoming.
 
 For player availability:
 - Use available_players with the correct fixture_id.
@@ -48,9 +57,10 @@ For follow-up questions:
 - Never invent a fixture ID.
 - When the coach selects a different opponent, retrieve fixtures to resolve its ID.
 
-Python handles exact player lists and squad formatting.
-Never reconstruct player lists from memory.
+Python handles fixture selection, exact player lists,
+and squad formatting.
 
+Never reconstruct player lists from memory.
 Maintain conversation context across questions.
 """
 
@@ -79,6 +89,23 @@ def extract_tool_result(result):
     return data
 
 
+def validate_availability_result(name: str, data: object) -> None:
+    if name != "available_players":
+        return
+
+    error_prefix = "available_players returned an invalid result"
+    if not isinstance(data, list):
+        raise ValueError(f"{error_prefix}: expected a list")
+
+    for index, player in enumerate(data, start=1):
+        if not isinstance(player, dict):
+            raise ValueError(f"{error_prefix}: expected a player record at position {index}")
+
+        for field in ("name", "rating"):
+            if field not in player:
+                raise ValueError(f"{error_prefix}: player {index} is missing {field}")
+
+
 class FootballAgent:
     def __init__(self, ollama, mcp_session, tools):
         self.ollama = ollama
@@ -96,6 +123,98 @@ class FootballAgent:
             }
         ]
 
+    async def select_fixture(
+        self,
+        question: str,
+    ) -> int | None:
+        """
+        Resolve and validate a fixture using MCP data.
+
+        Supports:
+        - Explicit fixture IDs
+        - Opponent names
+        - Follow-up questions using current fixture
+        """
+        result = await self.mcp_session.call_tool(
+            "fixtures",
+            arguments={},
+        )
+
+        fixtures = extract_tool_result(result)
+
+        selected_id = resolve_fixture(
+            question=question,
+            fixtures=fixtures,
+            current_fixture_id=self.current_fixture_id,
+        )
+
+        if selected_id is not None:
+            self.current_fixture_id = selected_id
+
+            print(f"[FIXTURE] Selected fixture {selected_id}")
+
+        return selected_id
+
+    async def execute_fixture_tool(
+        self,
+        name: str,
+        fixture_id: int,
+    ) -> str:
+        """
+        Execute a fixture-specific MCP tool.
+
+        Python controls the fixture ID and formats
+        the response deterministically.
+        """
+        arguments = {
+            "fixture_id": fixture_id,
+        }
+
+        validate_tool_arguments(
+            name=name,
+            arguments=arguments,
+            tools=self.tools,
+        )
+
+        print(f"[MCP] Calling {name}: {arguments}")
+
+        result = await self.mcp_session.call_tool(
+            name,
+            arguments=arguments,
+        )
+
+        data = extract_tool_result(result)
+        validate_availability_result(name, data)
+
+        self.current_fixture_id = fixture_id
+
+        self.messages.append(
+            {
+                "role": "tool",
+                "tool_name": name,
+                "content": json.dumps(data, default=str),
+            }
+        )
+
+        if name == "available_players":
+            formatted = format_available_players(data)
+
+        elif name == "generate_match_squads":
+            validate_squads(data)
+            formatted = format_squads(data)
+
+        else:
+            raise ValueError(f"Unsupported fixture tool: {name}")
+
+        self.messages.append(
+            {
+                "role": "assistant",
+                "content": formatted,
+            }
+        )
+
+        return formatted
+
     async def ask(self, question: str) -> str:
         self.messages.append(
             {
@@ -108,13 +227,28 @@ class FootballAgent:
         lower_question = question.lower()
 
         if (
-            any(word in lower_question for word in ("generate", "create", "build"))
+            any(
+                word in lower_question
+                for word in (
+                    "generate",
+                    "create",
+                    "build",
+                    "make",
+                )
+            )
             and "squad" in lower_question
         ):
             requested_tool = "generate_match_squads"
 
         elif "available" in lower_question or "availability" in lower_question:
             requested_tool = "available_players"
+
+        # Resolve the fixture before invoking Ollama.
+        if requested_tool is not None:
+            selected_id = await self.select_fixture(question)
+
+            if selected_id is None:
+                return "Which fixture do you mean? Please specify a fixture ID or opponent."
 
         for _ in range(MAX_TOOL_ITERATIONS):
             messages = list(self.messages)
@@ -143,50 +277,14 @@ class FootballAgent:
 
             tool_calls = response.message.tool_calls or []
 
+            # Qwen sometimes answers without calling
+            # the required MCP tool.
             if not tool_calls:
                 if requested_tool is not None:
-                    if self.current_fixture_id is None:
-                        raise RuntimeError("No fixture selected. Please specify a fixture.")
-
-                    arguments = {"fixture_id": self.current_fixture_id}
-
-                    validate_tool_arguments(
+                    return await self.execute_fixture_tool(
                         name=requested_tool,
-                        arguments=arguments,
-                        tools=self.tools,
+                        fixture_id=self.current_fixture_id,
                     )
-
-                    print(f"[MCP] Fallback calling {requested_tool}: {arguments}")
-
-                    result = await self.mcp_session.call_tool(
-                        requested_tool,
-                        arguments=arguments,
-                    )
-
-                    data = extract_tool_result(result)
-
-                    self.messages.append(
-                        {
-                            "role": "tool",
-                            "tool_name": requested_tool,
-                            "content": json.dumps(data, default=str),
-                        }
-                    )
-
-                    if requested_tool == "available_players":
-                        formatted = format_available_players(data)
-                    else:
-                        validate_squads(data)
-                        formatted = format_squads(data)
-
-                    self.messages.append(
-                        {
-                            "role": "assistant",
-                            "content": formatted,
-                        }
-                    )
-
-                    return formatted
 
                 return response.message.content or ""
 
@@ -195,6 +293,16 @@ class FootballAgent:
             for call in tool_calls:
                 name = call.function.name
                 arguments = call.function.arguments or {}
+
+                # Enforce fixture context in Python.
+                if name in FIXTURE_TOOLS:
+                    if self.current_fixture_id is None:
+                        raise ValueError("No fixture selected.")
+
+                    arguments = {
+                        **arguments,
+                        "fixture_id": self.current_fixture_id,
+                    }
 
                 validate_tool_arguments(
                     name=name,
@@ -210,24 +318,23 @@ class FootballAgent:
                 )
 
                 data = extract_tool_result(result)
+                validate_availability_result(name, data)
 
-                if name in {
-                    "available_players",
-                    "generate_match_squads",
-                }:
+                if name in FIXTURE_TOOLS:
                     self.current_fixture_id = arguments["fixture_id"]
 
                 self.messages.append(
                     {
                         "role": "tool",
                         "tool_name": name,
-                        "content": json.dumps(data, default=str),
+                        "content": json.dumps(
+                            data,
+                            default=str,
+                        ),
                     }
                 )
 
                 if name == "generate_match_squads":
-                    # Completeness is validated by match_service.py.
-                    # Retain defensive checks at the agent boundary.
                     validate_squads(data)
                     formatted = format_squads(data)
 
