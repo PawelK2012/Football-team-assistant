@@ -1,5 +1,6 @@
+import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, call
 
 import pytest
 
@@ -164,6 +165,53 @@ async def test_availability_accepts_empty_player_list(
     answer = await availability_agent.ask("Who is available for fixture 6?")
 
     assert answer.strip() == "Available players (0):"
+
+
+@pytest.mark.asyncio
+async def test_availability_tool_times_out(
+    availability_agent: FootballAgent,
+    availability_fixtures: list[dict],
+) -> None:
+    availability_agent.tool_timeout_seconds = 0.01
+    stalled = asyncio.Event()
+
+    async def call_tool(name: str, *, arguments: dict) -> SimpleNamespace:
+        if name == "fixtures":
+            return mcp_result(availability_fixtures)
+        await stalled.wait()
+        return mcp_result([])
+
+    availability_agent.mcp_session.call_tool.side_effect = call_tool
+
+    with pytest.raises(TimeoutError, match="MCP tool 'available_players' timed out"):
+        await asyncio.wait_for(availability_agent.ask("Who is available for fixture 6?"), 1)
+
+    assert availability_agent.mcp_session.call_tool.await_args_list == [
+        call("fixtures", arguments={}),
+        call("available_players", arguments={"fixture_id": 6}),
+    ]
+    assert not any(
+        isinstance(message, dict) and message.get("role") == "tool"
+        for message in availability_agent.messages
+    )
+
+
+@pytest.mark.asyncio
+async def test_fixture_lookup_times_out_before_calling_ollama(agent: FootballAgent) -> None:
+    agent.tool_timeout_seconds = 0.01
+    stalled = asyncio.Event()
+
+    async def call_tool(name: str, *, arguments: dict) -> SimpleNamespace:
+        await stalled.wait()
+        return mcp_result([])
+
+    agent.mcp_session.call_tool.side_effect = call_tool
+
+    with pytest.raises(TimeoutError, match="MCP tool 'fixtures' timed out"):
+        await asyncio.wait_for(agent.ask("Who is available for fixture 6?"), 1)
+
+    agent.mcp_session.call_tool.assert_awaited_once_with("fixtures", arguments={})
+    agent.ollama.chat.assert_not_awaited()
 
 
 @pytest.mark.asyncio
