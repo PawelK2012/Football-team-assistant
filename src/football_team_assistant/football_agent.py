@@ -112,6 +112,10 @@ def validate_availability_result(name: str, data: object) -> None:
                 raise ValueError(f"{error_prefix}: player {index} is missing {field}")
 
 
+class _MCPToolTimeout(TimeoutError):
+    """Identify tool timeouts so the agent can roll back the interrupted turn."""
+
+
 class FootballAgent:
     def __init__(
         self,
@@ -125,6 +129,7 @@ class FootballAgent:
         self.mcp_session = mcp_session
         self.tools = tools
         self.tool_timeout_seconds = tool_timeout_seconds
+        self._turn_lock = asyncio.Lock()
 
         self.tool_names = {tool["function"]["name"] for tool in tools}
 
@@ -142,7 +147,7 @@ class FootballAgent:
             async with asyncio.timeout(self.tool_timeout_seconds):
                 return await self.mcp_session.call_tool(name, arguments=arguments)
         except TimeoutError as error:
-            raise TimeoutError(f"MCP tool '{name}' timed out") from error
+            raise _MCPToolTimeout(f"MCP tool '{name}' timed out") from error
 
     async def select_fixture(
         self,
@@ -231,6 +236,15 @@ class FootballAgent:
         return formatted
 
     async def ask(self, question: str) -> str:
+        async with self._turn_lock:
+            turn_start = len(self.messages)
+            try:
+                return await self._run_turn(question)
+            except _MCPToolTimeout as error:
+                del self.messages[turn_start:]
+                raise TimeoutError(str(error)) from error.__cause__
+
+    async def _run_turn(self, question: str) -> str:
         self.messages.append(
             {
                 "role": "user",

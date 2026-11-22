@@ -168,11 +168,21 @@ async def test_availability_accepts_empty_player_list(
 
 
 @pytest.mark.asyncio
-async def test_availability_tool_times_out(
+async def test_availability_timeout_preserves_completed_turns(
     availability_agent: FootballAgent,
     availability_fixtures: list[dict],
 ) -> None:
     availability_agent.tool_timeout_seconds = 0.01
+    failed_response = availability_agent.ollama.chat.return_value
+    failed_response.message.content = "Alice is available"
+    availability_agent.ollama.chat.side_effect = [
+        model_response(content="Hello, coach"),
+        failed_response,
+        model_response(content="How can I help?"),
+    ]
+    assert await availability_agent.ask("Hello") == "Hello, coach"
+    completed_history = list(availability_agent.messages)
+
     stalled = asyncio.Event()
 
     async def call_tool(name: str, *, arguments: dict) -> SimpleNamespace:
@@ -190,15 +200,22 @@ async def test_availability_tool_times_out(
         call("fixtures", arguments={}),
         call("available_players", arguments={"fixture_id": 6}),
     ]
-    assert not any(
-        isinstance(message, dict) and message.get("role") == "tool"
-        for message in availability_agent.messages
-    )
+    assert availability_agent.messages == completed_history
+
+    assert await availability_agent.ask("What did you find?") == "How can I help?"
+    follow_up_messages = availability_agent.ollama.chat.await_args.kwargs["messages"]
+    assert follow_up_messages[: len(completed_history)] == completed_history
+    assert follow_up_messages[len(completed_history)] == {
+        "role": "user",
+        "content": "What did you find?",
+    }
+    assert failed_response.message not in follow_up_messages
 
 
 @pytest.mark.asyncio
 async def test_fixture_lookup_times_out_before_calling_ollama(agent: FootballAgent) -> None:
     agent.tool_timeout_seconds = 0.01
+    completed_history = list(agent.messages)
     stalled = asyncio.Event()
 
     async def call_tool(name: str, *, arguments: dict) -> SimpleNamespace:
@@ -212,6 +229,7 @@ async def test_fixture_lookup_times_out_before_calling_ollama(agent: FootballAge
 
     agent.mcp_session.call_tool.assert_awaited_once_with("fixtures", arguments={})
     agent.ollama.chat.assert_not_awaited()
+    assert agent.messages == completed_history
 
 
 @pytest.mark.asyncio
