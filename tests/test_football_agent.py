@@ -213,6 +213,54 @@ async def test_availability_timeout_preserves_completed_turns(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "switch_times_out, expected_fixture_id",
+    [
+        pytest.param(True, 6, id="timed-out-switch"),
+        pytest.param(False, 7, id="successful-switch"),
+    ],
+)
+async def test_follow_up_uses_last_completed_fixture_selection(
+    availability_agent: FootballAgent,
+    availability_fixtures: list[dict],
+    switch_times_out: bool,
+    expected_fixture_id: int,
+) -> None:
+    fixtures = mcp_result(
+        [
+            *availability_fixtures,
+            {"id": 7, "date": "2026-11-15", "opponent": "Portmanock FC", "home": True},
+        ]
+    )
+    availability = mcp_result([])
+    availability_agent.mcp_session.call_tool.side_effect = [
+        fixtures,
+        availability,
+        fixtures,
+        TimeoutError() if switch_times_out else availability,
+        fixtures,
+        availability,
+    ]
+
+    await availability_agent.ask("Who is available for fixture 6?")
+    if switch_times_out:
+        with pytest.raises(TimeoutError, match="MCP tool 'available_players' timed out"):
+            await availability_agent.ask("Who is available for fixture 7?")
+    else:
+        await availability_agent.ask("Who is available for fixture 7?")
+    await availability_agent.ask("Who is available now?")
+
+    assert availability_agent.mcp_session.call_tool.await_args_list == [
+        call("fixtures", arguments={}),
+        call("available_players", arguments={"fixture_id": 6}),
+        call("fixtures", arguments={}),
+        call("available_players", arguments={"fixture_id": 7}),
+        call("fixtures", arguments={}),
+        call("available_players", arguments={"fixture_id": expected_fixture_id}),
+    ]
+
+
+@pytest.mark.asyncio
 async def test_fixture_lookup_times_out_before_calling_ollama(agent: FootballAgent) -> None:
     agent.tool_timeout_seconds = 0.01
     completed_history = list(agent.messages)

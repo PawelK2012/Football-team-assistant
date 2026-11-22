@@ -238,10 +238,12 @@ class FootballAgent:
     async def ask(self, question: str) -> str:
         async with self._turn_lock:
             turn_start = len(self.messages)
+            previous_fixture_id = self.current_fixture_id
             try:
                 return await self._run_turn(question)
             except _MCPToolTimeout as error:
                 del self.messages[turn_start:]
+                self.current_fixture_id = previous_fixture_id
                 raise TimeoutError(str(error)) from error.__cause__
 
     async def _run_turn(self, question: str) -> str:
