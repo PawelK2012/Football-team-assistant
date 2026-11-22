@@ -1,6 +1,11 @@
+import asyncio
 import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
+from mcp import ClientSession
+from mcp.types import CallToolResult
+from ollama import AsyncClient
 
 from football_team_assistant.fixture_resolution import (
     resolve_fixture,
@@ -16,6 +21,7 @@ from football_team_assistant.tool_validation import (
 
 MODEL = "qwen3:8b"
 MAX_TOOL_ITERATIONS = 10
+DEFAULT_TOOL_TIMEOUT_SECONDS = 10.0
 
 FIXTURE_TOOLS = {
     "available_players",
@@ -106,11 +112,24 @@ def validate_availability_result(name: str, data: object) -> None:
                 raise ValueError(f"{error_prefix}: player {index} is missing {field}")
 
 
+class _MCPToolTimeout(TimeoutError):
+    """Identify tool timeouts so the agent can roll back the interrupted turn."""
+
+
 class FootballAgent:
-    def __init__(self, ollama, mcp_session, tools):
+    def __init__(
+        self,
+        ollama: AsyncClient,
+        mcp_session: ClientSession,
+        tools: list[dict],
+        *,
+        tool_timeout_seconds: float = DEFAULT_TOOL_TIMEOUT_SECONDS,
+    ) -> None:
         self.ollama = ollama
         self.mcp_session = mcp_session
         self.tools = tools
+        self.tool_timeout_seconds = tool_timeout_seconds
+        self._turn_lock = asyncio.Lock()
 
         self.tool_names = {tool["function"]["name"] for tool in tools}
 
@@ -122,6 +141,13 @@ class FootballAgent:
                 "content": build_system_prompt(),
             }
         ]
+
+    async def _call_tool(self, name: str, arguments: dict) -> CallToolResult:
+        try:
+            async with asyncio.timeout(self.tool_timeout_seconds):
+                return await self.mcp_session.call_tool(name, arguments=arguments)
+        except TimeoutError as error:
+            raise _MCPToolTimeout(f"MCP tool '{name}' timed out") from error
 
     async def select_fixture(
         self,
@@ -135,10 +161,7 @@ class FootballAgent:
         - Opponent names
         - Follow-up questions using current fixture
         """
-        result = await self.mcp_session.call_tool(
-            "fixtures",
-            arguments={},
-        )
+        result = await self._call_tool("fixtures", {})
 
         fixtures = extract_tool_result(result)
 
@@ -178,10 +201,7 @@ class FootballAgent:
 
         print(f"[MCP] Calling {name}: {arguments}")
 
-        result = await self.mcp_session.call_tool(
-            name,
-            arguments=arguments,
-        )
+        result = await self._call_tool(name, arguments)
 
         data = extract_tool_result(result)
         validate_availability_result(name, data)
@@ -216,6 +236,17 @@ class FootballAgent:
         return formatted
 
     async def ask(self, question: str) -> str:
+        async with self._turn_lock:
+            turn_start = len(self.messages)
+            previous_fixture_id = self.current_fixture_id
+            try:
+                return await self._run_turn(question)
+            except _MCPToolTimeout as error:
+                del self.messages[turn_start:]
+                self.current_fixture_id = previous_fixture_id
+                raise TimeoutError(str(error)) from error.__cause__
+
+    async def _run_turn(self, question: str) -> str:
         self.messages.append(
             {
                 "role": "user",
@@ -312,10 +343,7 @@ class FootballAgent:
 
                 print(f"[MCP] Calling {name}: {arguments}")
 
-                result = await self.mcp_session.call_tool(
-                    name,
-                    arguments=arguments,
-                )
+                result = await self._call_tool(name, arguments)
 
                 data = extract_tool_result(result)
                 validate_availability_result(name, data)

@@ -1,5 +1,6 @@
+import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, call
 
 import pytest
 
@@ -164,6 +165,119 @@ async def test_availability_accepts_empty_player_list(
     answer = await availability_agent.ask("Who is available for fixture 6?")
 
     assert answer.strip() == "Available players (0):"
+
+
+@pytest.mark.asyncio
+async def test_availability_timeout_preserves_completed_turns(
+    availability_agent: FootballAgent,
+    availability_fixtures: list[dict],
+) -> None:
+    availability_agent.tool_timeout_seconds = 0.01
+    failed_response = availability_agent.ollama.chat.return_value
+    failed_response.message.content = "Alice is available"
+    availability_agent.ollama.chat.side_effect = [
+        model_response(content="Hello, coach"),
+        failed_response,
+        model_response(content="How can I help?"),
+    ]
+    assert await availability_agent.ask("Hello") == "Hello, coach"
+    completed_history = list(availability_agent.messages)
+
+    stalled = asyncio.Event()
+
+    async def call_tool(name: str, *, arguments: dict) -> SimpleNamespace:
+        if name == "fixtures":
+            return mcp_result(availability_fixtures)
+        await stalled.wait()
+        return mcp_result([])
+
+    availability_agent.mcp_session.call_tool.side_effect = call_tool
+
+    with pytest.raises(TimeoutError, match="MCP tool 'available_players' timed out"):
+        await asyncio.wait_for(availability_agent.ask("Who is available for fixture 6?"), 1)
+
+    assert availability_agent.mcp_session.call_tool.await_args_list == [
+        call("fixtures", arguments={}),
+        call("available_players", arguments={"fixture_id": 6}),
+    ]
+    assert availability_agent.messages == completed_history
+
+    assert await availability_agent.ask("What did you find?") == "How can I help?"
+    follow_up_messages = availability_agent.ollama.chat.await_args.kwargs["messages"]
+    assert follow_up_messages[: len(completed_history)] == completed_history
+    assert follow_up_messages[len(completed_history)] == {
+        "role": "user",
+        "content": "What did you find?",
+    }
+    assert failed_response.message not in follow_up_messages
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "switch_times_out, expected_fixture_id",
+    [
+        pytest.param(True, 6, id="timed-out-switch"),
+        pytest.param(False, 7, id="successful-switch"),
+    ],
+)
+async def test_follow_up_uses_last_completed_fixture_selection(
+    availability_agent: FootballAgent,
+    availability_fixtures: list[dict],
+    switch_times_out: bool,
+    expected_fixture_id: int,
+) -> None:
+    fixtures = mcp_result(
+        [
+            *availability_fixtures,
+            {"id": 7, "date": "2026-11-15", "opponent": "Portmanock FC", "home": True},
+        ]
+    )
+    availability = mcp_result([])
+    availability_agent.mcp_session.call_tool.side_effect = [
+        fixtures,
+        availability,
+        fixtures,
+        TimeoutError() if switch_times_out else availability,
+        fixtures,
+        availability,
+    ]
+
+    await availability_agent.ask("Who is available for fixture 6?")
+    if switch_times_out:
+        with pytest.raises(TimeoutError, match="MCP tool 'available_players' timed out"):
+            await availability_agent.ask("Who is available for fixture 7?")
+    else:
+        await availability_agent.ask("Who is available for fixture 7?")
+    await availability_agent.ask("Who is available now?")
+
+    assert availability_agent.mcp_session.call_tool.await_args_list == [
+        call("fixtures", arguments={}),
+        call("available_players", arguments={"fixture_id": 6}),
+        call("fixtures", arguments={}),
+        call("available_players", arguments={"fixture_id": 7}),
+        call("fixtures", arguments={}),
+        call("available_players", arguments={"fixture_id": expected_fixture_id}),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_fixture_lookup_times_out_before_calling_ollama(agent: FootballAgent) -> None:
+    agent.tool_timeout_seconds = 0.01
+    completed_history = list(agent.messages)
+    stalled = asyncio.Event()
+
+    async def call_tool(name: str, *, arguments: dict) -> SimpleNamespace:
+        await stalled.wait()
+        return mcp_result([])
+
+    agent.mcp_session.call_tool.side_effect = call_tool
+
+    with pytest.raises(TimeoutError, match="MCP tool 'fixtures' timed out"):
+        await asyncio.wait_for(agent.ask("Who is available for fixture 6?"), 1)
+
+    agent.mcp_session.call_tool.assert_awaited_once_with("fixtures", arguments={})
+    agent.ollama.chat.assert_not_awaited()
+    assert agent.messages == completed_history
 
 
 @pytest.mark.asyncio
