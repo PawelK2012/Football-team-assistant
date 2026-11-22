@@ -1,5 +1,5 @@
-
 import re
+
 
 # todo - it's a duplicate of the same function in agent class
 def extract_explicit_fixture_id(question: str) -> int | None:
@@ -20,19 +20,13 @@ def resolve_fixture(
 
     if explicit_id is not None:
         if not any(f["id"] == explicit_id for f in fixtures):
-            raise ValueError(
-                f"Fixture {explicit_id} does not exist."
-            )
+            raise ValueError(f"Fixture {explicit_id} does not exist.")
         return explicit_id
 
     question_lower = question.casefold()
 
     # Match known opponents, preferring longer names.
-    matches = [
-        fixture
-        for fixture in fixtures
-        if fixture["opponent"].casefold() in question_lower
-    ]
+    matches = [fixture for fixture in fixtures if fixture["opponent"].casefold() in question_lower]
 
     # Also allow short names, such as "Verona".
     if not matches:
@@ -48,11 +42,7 @@ def resolve_fixture(
             if len(first_word) < 4:
                 continue
 
-            pattern = (
-                r"(?<!\w)"
-                + re.escape(first_word)
-                + r"(?!\w)"
-            )
+            pattern = r"(?<!\w)" + re.escape(first_word) + r"(?!\w)"
 
             if re.search(pattern, question_lower):
                 matches.append(fixture)
@@ -62,14 +52,10 @@ def resolve_fixture(
 
         if len(unique_ids) > 1:
             descriptions = ", ".join(
-                f"{fixture['id']}: "
-                f"{fixture['opponent']} "
-                f"({fixture['date']})"
-                for fixture in matches
+                f"{fixture['id']}: {fixture['opponent']} ({fixture['date']})" for fixture in matches
             )
             raise ValueError(
-                "Multiple fixtures match. "
-                f"Please specify a fixture ID: {descriptions}"
+                f"Multiple fixtures match. Please specify a fixture ID: {descriptions}"
             )
 
         return matches[0]["id"]
