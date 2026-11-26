@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, call
 
@@ -124,6 +125,102 @@ def availability_fixtures() -> list[dict]:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
+    "question, model_replies, expected_tool_calls, expected_answer",
+    [
+        pytest.param(
+            "Who is available for fixture 6?",
+            [model_response(tool_call("available_players", fixture_id=999))],
+            [("fixtures", {}), ("available_players", {"fixture_id": 6})],
+            "Available players (2):\n\n1. Alex (4.5)\n2. Sam (3.5)",
+            id="wrong-model-fixture-id",
+        ),
+        pytest.param(
+            "Who is available for fixture 6?",
+            [model_response(content="Taylor is available and has a rating of 5.0.")],
+            [("fixtures", {}), ("available_players", {"fixture_id": 6})],
+            "Available players (2):\n\n1. Alex (4.5)\n2. Sam (3.5)",
+            id="python-fallback",
+        ),
+        pytest.param(
+            "Who is available?",
+            [],
+            [("fixtures", {})],
+            "Which fixture do you mean? Please specify a fixture ID or opponent.",
+            id="no-fixture-selected",
+        ),
+    ],
+)
+async def test_availability_evaluation(
+    agent: FootballAgent,
+    availability_fixtures: list[dict],
+    question: str,
+    model_replies: list[SimpleNamespace],
+    expected_tool_calls: list[tuple[str, dict[str, int]]],
+    expected_answer: str,
+) -> None:
+    fixtures = [
+        *availability_fixtures,
+        {"id": 7, "date": "2026-11-15", "opponent": "Portmanock FC", "home": False},
+    ]
+    players = [
+        {"id": 1, "name": "Alex", "rating": 4.5},
+        {"id": 2, "name": "Sam", "rating": 3.5},
+    ]
+    agent.ollama.chat.side_effect = model_replies
+    agent.mcp_session.call_tool.side_effect = [mcp_result(fixtures), mcp_result(players)]
+
+    answer = await agent.ask(question)
+
+    assert agent.mcp_session.call_tool.await_args_list == [
+        call(name, arguments=arguments) for name, arguments in expected_tool_calls
+    ]
+    assert agent.ollama.chat.await_count == len(model_replies)
+    assert answer == expected_answer
+
+
+@pytest.mark.asyncio
+async def test_availability_logs_correlate_model_and_mcp_by_turn(
+    agent: FootballAgent,
+    availability_fixtures: list[dict],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    agent.ollama.chat.side_effect = [
+        model_response(tool_call("available_players", fixture_id=6)),
+        model_response(),
+    ]
+    fixtures = mcp_result(availability_fixtures)
+    players = mcp_result([{"name": "Alex", "rating": 4.5}])
+    agent.mcp_session.call_tool.side_effect = [fixtures, players, fixtures, players]
+    logger_name = FootballAgent.__module__
+
+    with caplog.at_level(logging.INFO, logger=logger_name):
+        await agent.ask("Who is available for fixture 6?")
+        await agent.ask("Who is available now?")
+
+    records = [record for record in caplog.records if record.name == logger_name]
+    assert len(records) == 6
+    for turn_records, expected_tool_call_count in ((records[:3], 1), (records[3:], 0)):
+        fixture_lookup, model_decision, availability_lookup = turn_records
+        assert (fixture_lookup.tool_name, fixture_lookup.outcome) == (
+            "fixtures",
+            "response_received",
+        )
+        assert (availability_lookup.tool_name, availability_lookup.outcome) == (
+            "available_players",
+            "response_received",
+        )
+        assert all(record.levelno == logging.INFO for record in turn_records)
+        assert model_decision.tool_call_count == expected_tool_call_count
+        assert fixture_lookup.duration_ms >= 0
+        assert availability_lookup.duration_ms >= 0
+        assert model_decision.turn_id
+        assert fixture_lookup.turn_id == model_decision.turn_id == availability_lookup.turn_id
+
+    assert records[0].turn_id != records[3].turn_id
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     "payload, expected_error",
     [
         pytest.param({"status": "unexpected"}, "expected a list", id="not-a-list"),
@@ -171,6 +268,7 @@ async def test_availability_accepts_empty_player_list(
 async def test_availability_timeout_preserves_completed_turns(
     availability_agent: FootballAgent,
     availability_fixtures: list[dict],
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     availability_agent.tool_timeout_seconds = 0.01
     failed_response = availability_agent.ollama.chat.return_value
@@ -193,8 +291,22 @@ async def test_availability_timeout_preserves_completed_turns(
 
     availability_agent.mcp_session.call_tool.side_effect = call_tool
 
-    with pytest.raises(TimeoutError, match="MCP tool 'available_players' timed out"):
-        await asyncio.wait_for(availability_agent.ask("Who is available for fixture 6?"), 1)
+    logger_name = FootballAgent.__module__
+    with caplog.at_level(logging.INFO, logger=logger_name):
+        with pytest.raises(TimeoutError, match="MCP tool 'available_players' timed out"):
+            await asyncio.wait_for(availability_agent.ask("Who is available for fixture 6?"), 1)
+
+    records = [record for record in caplog.records if record.name == logger_name]
+    fixture_lookup, model_decision, timeout = records
+    assert fixture_lookup.tool_name == "fixtures"
+    assert model_decision.tool_call_count == len(failed_response.message.tool_calls)
+    assert (timeout.levelno, timeout.tool_name, timeout.outcome) == (
+        logging.WARNING,
+        "available_players",
+        "timeout",
+    )
+    assert timeout.turn_id
+    assert fixture_lookup.turn_id == model_decision.turn_id == timeout.turn_id
 
     assert availability_agent.mcp_session.call_tool.await_args_list == [
         call("fixtures", arguments={}),
@@ -261,7 +373,9 @@ async def test_follow_up_uses_last_completed_fixture_selection(
 
 
 @pytest.mark.asyncio
-async def test_fixture_lookup_times_out_before_calling_ollama(agent: FootballAgent) -> None:
+async def test_fixture_lookup_times_out_before_calling_ollama(
+    agent: FootballAgent, caplog: pytest.LogCaptureFixture
+) -> None:
     agent.tool_timeout_seconds = 0.01
     completed_history = list(agent.messages)
     stalled = asyncio.Event()
@@ -272,12 +386,23 @@ async def test_fixture_lookup_times_out_before_calling_ollama(agent: FootballAge
 
     agent.mcp_session.call_tool.side_effect = call_tool
 
-    with pytest.raises(TimeoutError, match="MCP tool 'fixtures' timed out"):
-        await asyncio.wait_for(agent.ask("Who is available for fixture 6?"), 1)
+    logger_name = FootballAgent.__module__
+    with caplog.at_level(logging.INFO, logger=logger_name):
+        with pytest.raises(TimeoutError, match="MCP tool 'fixtures' timed out"):
+            await asyncio.wait_for(agent.ask("Who is available for fixture 6?"), 1)
 
     agent.mcp_session.call_tool.assert_awaited_once_with("fixtures", arguments={})
     agent.ollama.chat.assert_not_awaited()
     assert agent.messages == completed_history
+
+    (record,) = [record for record in caplog.records if record.name == logger_name]
+    assert (record.levelno, record.tool_name, record.outcome) == (
+        logging.WARNING,
+        "fixtures",
+        "timeout",
+    )
+    assert record.duration_ms >= 0
+    assert record.turn_id
 
 
 @pytest.mark.asyncio

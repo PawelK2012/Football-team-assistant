@@ -1,6 +1,9 @@
 import asyncio
 import json
+import logging
 from datetime import datetime
+from time import perf_counter
+from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from mcp import ClientSession
@@ -18,6 +21,8 @@ from football_team_assistant.formatters import (
 from football_team_assistant.tool_validation import (
     validate_tool_arguments,
 )
+
+logger = logging.getLogger(__name__)
 
 MODEL = "qwen3:8b"
 MAX_TOOL_ITERATIONS = 10
@@ -142,16 +147,41 @@ class FootballAgent:
             }
         ]
 
-    async def _call_tool(self, name: str, arguments: dict) -> CallToolResult:
+    async def _call_tool(
+        self, name: str, arguments: dict, *, turn_id: str | None = None
+    ) -> CallToolResult:
+        started_at = perf_counter()
         try:
             async with asyncio.timeout(self.tool_timeout_seconds):
-                return await self.mcp_session.call_tool(name, arguments=arguments)
+                result = await self.mcp_session.call_tool(name, arguments=arguments)
         except TimeoutError as error:
+            logger.warning(
+                "MCP tool call timed out",
+                extra={
+                    "turn_id": turn_id,
+                    "tool_name": name,
+                    "outcome": "timeout",
+                    "duration_ms": (perf_counter() - started_at) * 1_000,
+                },
+            )
             raise _MCPToolTimeout(f"MCP tool '{name}' timed out") from error
+
+        logger.info(
+            "MCP tool response received",
+            extra={
+                "turn_id": turn_id,
+                "tool_name": name,
+                "outcome": "response_received",
+                "duration_ms": (perf_counter() - started_at) * 1_000,
+            },
+        )
+        return result
 
     async def select_fixture(
         self,
         question: str,
+        *,
+        turn_id: str | None = None,
     ) -> int | None:
         """
         Resolve and validate a fixture using MCP data.
@@ -161,7 +191,7 @@ class FootballAgent:
         - Opponent names
         - Follow-up questions using current fixture
         """
-        result = await self._call_tool("fixtures", {})
+        result = await self._call_tool("fixtures", {}, turn_id=turn_id)
 
         fixtures = extract_tool_result(result)
 
@@ -182,6 +212,8 @@ class FootballAgent:
         self,
         name: str,
         fixture_id: int,
+        *,
+        turn_id: str | None = None,
     ) -> str:
         """
         Execute a fixture-specific MCP tool.
@@ -201,7 +233,7 @@ class FootballAgent:
 
         print(f"[MCP] Calling {name}: {arguments}")
 
-        result = await self._call_tool(name, arguments)
+        result = await self._call_tool(name, arguments, turn_id=turn_id)
 
         data = extract_tool_result(result)
         validate_availability_result(name, data)
@@ -237,16 +269,17 @@ class FootballAgent:
 
     async def ask(self, question: str) -> str:
         async with self._turn_lock:
+            turn_id = uuid4().hex
             turn_start = len(self.messages)
             previous_fixture_id = self.current_fixture_id
             try:
-                return await self._run_turn(question)
+                return await self._run_turn(question, turn_id=turn_id)
             except _MCPToolTimeout as error:
                 del self.messages[turn_start:]
                 self.current_fixture_id = previous_fixture_id
                 raise TimeoutError(str(error)) from error.__cause__
 
-    async def _run_turn(self, question: str) -> str:
+    async def _run_turn(self, question: str, *, turn_id: str) -> str:
         self.messages.append(
             {
                 "role": "user",
@@ -276,7 +309,7 @@ class FootballAgent:
 
         # Resolve the fixture before invoking Ollama.
         if requested_tool is not None:
-            selected_id = await self.select_fixture(question)
+            selected_id = await self.select_fixture(question, turn_id=turn_id)
 
             if selected_id is None:
                 return "Which fixture do you mean? Please specify a fixture ID or opponent."
@@ -307,6 +340,10 @@ class FootballAgent:
             self.messages.append(response.message)
 
             tool_calls = response.message.tool_calls or []
+            logger.info(
+                "Ollama model decision received",
+                extra={"turn_id": turn_id, "tool_call_count": len(tool_calls)},
+            )
 
             # Qwen sometimes answers without calling
             # the required MCP tool.
@@ -315,6 +352,7 @@ class FootballAgent:
                     return await self.execute_fixture_tool(
                         name=requested_tool,
                         fixture_id=self.current_fixture_id,
+                        turn_id=turn_id,
                     )
 
                 return response.message.content or ""
@@ -343,7 +381,7 @@ class FootballAgent:
 
                 print(f"[MCP] Calling {name}: {arguments}")
 
-                result = await self._call_tool(name, arguments)
+                result = await self._call_tool(name, arguments, turn_id=turn_id)
 
                 data = extract_tool_result(result)
                 validate_availability_result(name, data)
