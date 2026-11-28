@@ -1,0 +1,89 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+  color: #f2f2f2;
+  background: #0d0d0d;
+  --panel: #171717;
+  --input: #242424;
+  --border: #363636;
+  --muted: #ababab;
+  --error: #ffaaaa;
+  --primary: #ebebeb;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; min-width: 0; }
+a { color: inherit; }
+h1, h2, p { margin: 0; }
+h1 { font-size: clamp(1.65rem, 4vw, 2.25rem); font-weight: 620; letter-spacing: -.04em; }
+h2 { font-size: 1.1rem; font-weight: 600; }
+button, input, select { font: inherit; }
+button, input, select, .sidebar a { border: 1px solid var(--border); }
+button, input, select { min-height: 2.65rem; border-radius: 0; }
+button { padding: .55rem .9rem; background: var(--primary); color: #171717; cursor: pointer; }
+button:hover:not(:disabled) { background: #fff; }
+button:disabled { cursor: default; opacity: .55; }
+button.secondary { color: inherit; background: var(--input); }
+button.secondary:hover:not(:disabled) { background: #303030; }
+button.danger { background: #442728; color: #ffdada; }
+button.danger:hover:not(:disabled) { background: #5b3033; }
+input, select { width: 100%; padding: .5rem .7rem; color: inherit; background: var(--input); }
+input[type="checkbox"] { width: 1.1rem; min-height: auto; accent-color: #eee; }
+:focus-visible { outline: 2px solid #f0f0f0; outline-offset: 3px; }
+
+.layout { display: grid; grid-template-columns: 14rem minmax(0, 1fr); min-height: 100vh; }
+.sidebar { padding: 2rem 1rem; background: #151515; border-right: 1px solid #2b2b2b; }
+.brand { margin: 0 .55rem 1.75rem; font-weight: 650; }
+.sidebar nav { display: grid; gap: .3rem; }
+.sidebar a { padding: .7rem .65rem; text-decoration: none; color: #d1d1d1; border-color: transparent; }
+.sidebar a[aria-current="page"], .sidebar a:hover { background: var(--input); color: #fff; }
+main { width: 100%; max-width: 76rem; padding: clamp(1rem, 4vw, 3rem); }
+.page-header, .toolbar, .actions { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.page-header, .toolbar { justify-content: space-between; }
+.page-header { margin-bottom: 1rem; }
+#status { color: var(--muted); margin-bottom: .85rem; }
+#status:empty { display: none; }
+#status[data-error], .form-message[data-error] { color: var(--error); }
+.panel { border: 1px solid var(--border); background: var(--panel); margin-bottom: 1rem; }
+.toolbar, .empty, .editor { padding: 1rem; }
+.empty { color: var(--muted); }
+.row { padding: .8rem 1rem; border-bottom: 1px solid #2d2d2d; min-width: 0; }
+.row:last-child { border-bottom: 0; }
+.record, .availability-row {
+  display: grid;
+  align-items: center;
+  gap: .65rem 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.record-name { font-weight: 580; overflow-wrap: anywhere; }
+.detail, .selected-status { color: var(--muted); font-size: .92rem; overflow-wrap: anywhere; }
+.record .detail { margin-top: .2rem; }
+.availability-row { grid-template-columns: minmax(0, 1fr) minmax(8rem, 10rem) minmax(9rem, 12rem); }
+.availability-row[data-pending] { background: #202020; }
+.availability-row select[disabled] { opacity: .7; }
+.fixture-field { display: grid; gap: .35rem; max-width: 100%; flex: 1 1 15rem; }
+.fixture-field select { max-width: 33rem; }
+.editor { display: grid; gap: 1rem; }
+.field { display: grid; gap: .35rem; max-width: 34rem; }
+.field.checkbox { display: flex; align-items: center; }
+.field-error { color: var(--error); font-size: .88rem; }
+.field-error:empty, .form-message:empty { display: none; }
+dialog { width: min(26rem, calc(100% - 2rem)); padding: 1.2rem; border: 1px solid var(--border); background: var(--panel); color: inherit; }
+dialog::backdrop { background: #000a; }
+dialog p { margin: .8rem 0 1rem; overflow-wrap: anywhere; }
+
+@media (max-width: 700px) {
+  .layout { display: block; }
+  .sidebar { padding: .9rem 1rem .55rem; border-right: 0; border-bottom: 1px solid #2b2b2b; }
+  .brand { margin: 0 0 .6rem; }
+  .sidebar nav { display: flex; flex-wrap: wrap; }
+  .sidebar a { padding: .5rem .55rem; }
+}
+
+@media (max-width: 470px) {
+  .record { grid-template-columns: 1fr; }
+  .availability-row { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .availability-row .record-name { grid-column: 1 / -1; }
+  .toolbar { align-items: end; }
+}

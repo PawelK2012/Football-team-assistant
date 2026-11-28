@@ -1,6 +1,6 @@
 UV := uv --config-file ./uv.toml
 
-.PHONY: install test run webapp
+.PHONY: install test run webapp admin
 
 install:
 	$(UV) sync
@@ -20,6 +20,10 @@ server:
 webapp:
 	$(UV) run --locked uvicorn football_team_assistant.web_chat.app:app \
 		--host 127.0.0.1 --port 8001 --workers 1 --no-proxy-headers --no-access-log
+
+admin:
+	$(UV) run --locked uvicorn football_team_assistant.web_admin.app:app \
+		--host 127.0.0.1 --port 8002 --workers 1 --no-proxy-headers --no-access-log
 
 client:
 	uv run python -m football_team_assistant.mcp_client

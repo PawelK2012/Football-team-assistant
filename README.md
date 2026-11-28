@@ -96,3 +96,15 @@ tests/
 > Create balanced squads for the Raheny match
 ## Debugging
 If system see mcp db unsted env variable `unset DATABASE_URL` and try again
+
+## Admin panel
+
+Start the application's PostgreSQL database and set `DATABASE_URL` to it.
+Run `make admin` and open [the admin panel](http://127.0.0.1:8002/admin) on
+the same computer. The panel uses the same roster and fixtures as the football
+agent and can run with Ollama and the chat service stopped.
+
+Use **Players** and **Fixtures** to manage records. In **Availability**, choose
+a fixture, edit the roster statuses, and select **Save changes** once. The
+panel asks before discarding pending edits when you switch fixtures or open
+another admin page.
