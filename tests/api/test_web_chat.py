@@ -68,9 +68,29 @@ def test_page_assets_and_turn(client: TestClient) -> None:
     page = client.get("/chat")
     assert page.status_code == 200
     assert page.headers["cache-control"] == "no-store"
+    assert 'class="brand" href="/chat"' in page.text
+    assert 'aria-label="Quick actions"' in page.text
+    assert 'id="reply-ball" aria-hidden="true" hidden' in page.text
+    for asset in ("clipboard.png", "favicon.png", "trinity-donaghmede-fc.png", "ui.css"):
+        assert f"/assets/{asset}" in page.text
+        assert client.get(f"/assets/{asset}").status_code == 200
+    for asset in ("shell.js", "chat-reply.js", "markdown-it.min.js"):
+        assert client.get(f"/assets/{asset}").status_code == 200
+    icons = client.get("/assets/icons.svg")
+    assert icons.status_code == 200
+    assert 'id="copy"' in icons.text
     for asset in ("chat.css", "chat.js"):
         assert f"/chat/static/{asset}" in page.text
         assert client.get(f"/chat/static/{asset}").status_code == 200
+    logo = client.get("/chat/static/football-assistant.png")
+    assert logo.headers["content-type"] == "image/png"
+    assert logo.content.startswith(b"\x89PNG\r\n\x1a\n")
+    stylesheet = client.get("/assets/ui.css")
+    assert 'url("tactics-wallpaper.png")' in stylesheet.text
+    assert client.get("/assets/inter-variable.woff2").headers["content-type"] == "font/woff2"
+    wallpaper = client.get("/chat/static/tactics-wallpaper.png")
+    assert wallpaper.headers["content-type"] == "image/png"
+    assert wallpaper.content.startswith(b"\x89PNG\r\n\x1a\n")
     created = client.post(CONVERSATIONS)
     assert created.status_code == 201
     data = turn_data("  upcoming fixtures  ")
@@ -107,6 +127,7 @@ def test_access_guard(client: TestClient) -> None:
     assert client.post(CONVERSATIONS, headers={"Origin": "http://other.invalid"}).status_code == 403
     assert client.post(CONVERSATIONS, headers={"Origin": ""}).status_code == 403
     assert client.get("/chat/static/chat.js", headers={"Host": "elsewhere"}).status_code == 403
+    assert client.get("/assets/ui.css", headers={"Host": "elsewhere"}).status_code == 403
     with TestClient(make_test_app(), base_url=ORIGIN, client=("192.0.2.10", 1234)) as remote:
         assert remote.get("/chat", headers={"X-Forwarded-For": "127.0.0.1"}).status_code == 403
         assert remote.post(CONVERSATIONS, headers=HEADERS).status_code == 403

@@ -9,6 +9,7 @@ from uuid import UUID
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from ollama import AsyncClient
@@ -127,6 +128,7 @@ def create_app(
         openapi_url=None,
         redirect_slashes=False,
     )
+    app.mount("/assets", StaticFiles(directory=STATIC.parents[1] / "static"), name="assets")
 
     @app.middleware("http")
     async def guard(
@@ -169,6 +171,18 @@ def create_app(
     @app.get("/chat/static/chat.js")
     async def javascript() -> FileResponse:
         return FileResponse(STATIC / "chat.js", media_type="text/javascript")
+
+    @app.get("/chat/static/football-assistant.png")
+    async def brand_icon() -> FileResponse:
+        return FileResponse(
+            STATIC.parents[1] / "static" / "football-assistant.png", media_type="image/png"
+        )
+
+    @app.get("/chat/static/tactics-wallpaper.png")
+    async def tactics_wallpaper() -> FileResponse:
+        return FileResponse(
+            STATIC.parents[1] / "static" / "tactics-wallpaper.png", media_type="image/png"
+        )
 
     @app.post("/chat/conversations", status_code=201)
     async def create_conversation(request: Request) -> dict[str, str]:

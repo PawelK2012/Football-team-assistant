@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#062129">
+  <title>Football Assistant</title>
+  <link rel="icon" href="/assets/favicon.png" type="image/png" sizes="64x64">
+  <link rel="stylesheet" href="/assets/ui.css">
+  <link rel="stylesheet" href="/admin/static/admin.css">
+  <script type="module" src="/admin/static/admin.js"></script>
+</head>
+<body data-app="admin">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <a class="brand" href="http://127.0.0.1:8001/chat" aria-label="Football Assistant home">
+          <img src="/assets/clipboard.png" alt="" width="256" height="256">
+          <span class="brand-name">Football <span>Assistant</span></span>
+        </a>
+        <button class="menu-toggle secondary" type="button" aria-label="Open navigation"
+          aria-expanded="false" aria-controls="sidebar-content">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/assets/icons.svg#menu"></use></svg>
+        </button>
+      </div>
+      <div class="sidebar-content" id="sidebar-content">
+        <div class="team">
+          <img class="team-mark" src="/assets/trinity-donaghmede-fc.png" alt="" width="144" height="144">
+          <div><span class="team-name">Trinity Donaghmede FC</span><span class="team-age">U8</span></div>
+        </div>
+        <nav aria-label="Football Assistant"></nav>
+        <details class="sidebar-help">
+          <summary>
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/assets/icons.svg#circle-question-mark"></use></svg>
+            Help
+          </summary>
+          <p>Manage players and fixtures in the sidebar. Choose a fixture on the Availability page to record attendance. Ratings are saved on player records.</p>
+        </details>
+      </div>
+    </aside>
+
+    <main id="main" class="admin" tabindex="-1">
+      <header class="page-header">
+        <div class="page-heading">
+          <div>
+            <h1 id="page-title"></h1>
+            <p class="page-description" id="page-description"></p>
+          </div>
+        </div>
+        <button type="button" id="new-record" hidden></button>
+      </header>
+      <p id="status" role="status" tabindex="-1"></p>
+      <section id="content" aria-labelledby="page-title"></section>
+    </main>
+  </div>
+  <dialog id="dialog" aria-labelledby="dialog-title">
+    <h2 id="dialog-title"></h2>
+    <div id="dialog-content"></div>
+  </dialog>
+</body>
+</html>
