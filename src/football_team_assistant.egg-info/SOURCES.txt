@@ -2,6 +2,7 @@ README.md
 pyproject.toml
 src/football_team_assistant/__init__.py
 src/football_team_assistant/agent.py
+src/football_team_assistant/fixture_resolution.py
 src/football_team_assistant/football_agent.py
 src/football_team_assistant/formatters.py
 src/football_team_assistant/main.py
@@ -35,6 +36,13 @@ src/football_team_assistant/repositories/goalkeeper_repository.py
 src/football_team_assistant/repositories/player_repository.py
 src/football_team_assistant/services/__init__.py
 src/football_team_assistant/services/match_service.py
+src/football_team_assistant/web_chat/__init__.py
+src/football_team_assistant/web_chat/app.py
+src/football_team_assistant/web_chat/conversations.py
+src/football_team_assistant/web_chat/static/chat.css
+src/football_team_assistant/web_chat/static/chat.js
+src/football_team_assistant/web_chat/static/index.html
+tests/test_fixture_resolution.py
 tests/test_football_agent.py
 tests/test_formatters.py
 tests/test_mcp_response.py

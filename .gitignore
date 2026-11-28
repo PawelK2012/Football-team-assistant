@@ -1,6 +1,11 @@
 .venv/
 .env
 __pycache__/
+*.pyc
+venv/
+dist/
+build/
+*.egg-info/
 
 AGENTS.md
 LEARNING.md
