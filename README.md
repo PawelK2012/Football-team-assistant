@@ -1,5 +1,17 @@
 ### Football team assistant
 
+## Browser chat
+
+Start local Ollama with `qwen3:8b` available and set `DATABASE_URL` for your running
+PostgreSQL database. From the repository root, run:
+
+```sh
+make webapp
+```
+
+The web chat starts the agent's MCP connection during startup. Open the chat on
+the same computer. [Football Agent Web Chat](http://127.0.0.1:8001/chat)
+
 ## High level architecture 
 
 

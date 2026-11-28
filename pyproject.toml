@@ -21,6 +21,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"football_team_assistant.web_chat" = ["static/*.html", "static/*.css", "static/*.js"]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 100

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#151618">
+  <title>Football Agent</title>
+  <link rel="stylesheet" href="/chat/static/chat.css">
+  <script src="/chat/static/chat.js" defer></script>
+</head>
+<body>
+  <div class="workspace">
+    <aside class="sidebar" aria-label="Chat workspace">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><span></span></span>
+        <span>Football Agent</span>
+      </div>
+      <button id="new-chat" class="new-chat" type="button" disabled>
+        <span class="plus" aria-hidden="true">+</span> New chat
+      </button>
+      <a class="current-chat" href="#transcript">
+        <span class="chat-icon" aria-hidden="true"></span>
+        Current conversation
+      </a>
+      <p class="session-note">Conversation history stays in this tab.</p>
+    </aside>
+
+    <main class="chat">
+      <header class="chat-header">
+        <h1>Agent chat</h1>
+        <p id="connection" class="connection" data-state="connecting">Connecting</p>
+      </header>
+
+      <section id="transcript" class="transcript" aria-label="Conversation" tabindex="0">
+        <div class="conversation">
+          <div id="welcome" class="welcome">
+            <div class="intro">
+              <div class="pitch" aria-hidden="true"><span></span></div>
+              <h2>What’s the plan?</h2>
+              <p>Ask about upcoming fixtures, player availability, or balanced squads.</p>
+            </div>
+            <div class="prompts" aria-label="Suggested questions">
+              <button class="prompt" type="button" data-prompt="Which fixtures are upcoming?">
+                <span class="prompt-icon" aria-hidden="true"><span class="calendar-icon"></span></span>
+                <span class="prompt-copy">
+                  <strong>Upcoming fixtures</strong>
+                  <span>See who we’re playing next.</span>
+                </span>
+                <span class="prompt-arrow" aria-hidden="true">↗</span>
+              </button>
+              <button class="prompt" type="button"
+                data-prompt="Who is available for the match against opponent name?"
+                data-replace="opponent name">
+                <span class="prompt-icon" aria-hidden="true"><span class="player-icon"></span></span>
+                <span class="prompt-copy">
+                  <strong>Player availability</strong>
+                  <span>Find out who can play.</span>
+                </span>
+                <span class="prompt-arrow" aria-hidden="true">↗</span>
+              </button>
+              <button class="prompt" type="button"
+                data-prompt="Create balanced squads for the match against opponent name."
+                data-replace="opponent name">
+                <span class="prompt-icon" aria-hidden="true"><span class="squads-icon"></span></span>
+                <span class="prompt-copy">
+                  <strong>Build squads</strong>
+                  <span>Prepare two balanced teams.</span>
+                </span>
+                <span class="prompt-arrow" aria-hidden="true">↗</span>
+              </button>
+            </div>
+          </div>
+          <ol id="messages"></ol>
+        </div>
+      </section>
+
+      <div class="chat-footer">
+        <div class="feedback">
+          <p id="status" role="status" aria-atomic="true"></p>
+          <p id="error" role="alert" aria-atomic="true"></p>
+          <button id="retry" type="button" hidden>Retry</button>
+        </div>
+        <form id="composer">
+          <label class="visually-hidden" for="message">Message</label>
+          <div class="compose-row">
+            <textarea id="message" rows="2" placeholder="Ask your football agent…" required></textarea>
+            <button id="send" type="submit" disabled>
+              Send <span aria-hidden="true">↑</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
