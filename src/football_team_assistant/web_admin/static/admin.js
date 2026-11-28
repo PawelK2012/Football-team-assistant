@@ -1,4 +1,4 @@
-"use strict";
+import { icon, pages, renderSidebar } from "/assets/shell.js";
 
 const title = document.querySelector("#page-title");
 const content = document.querySelector("#content");
@@ -6,6 +6,7 @@ const status = document.querySelector("#status");
 const newRecord = document.querySelector("#new-record");
 const dialog = document.querySelector("#dialog");
 const page = location.pathname.split("/").at(-1);
+const isRatings = page === "players" && new URL(location.href).searchParams.get("view") === "ratings";
 
 function element(tag, options = {}, ...children) {
   const node = document.createElement(tag);
@@ -91,6 +92,59 @@ function fixtureLabel(fixture) {
   return fixture.opponent + " · " + fixture.date + " · " + (fixture.home ? "Home" : "Away");
 }
 
+async function getFixtureRoster(fixtureId) {
+  const result = await request("/fixtures/" + fixtureId + "/availability");
+  return result.players;
+}
+
+function viewFixtureAvailability(fixtureId, fixtureName) {
+  const message = element("p", { class: "form-message", role: "status" });
+  const players = element("ul", { class: "available-player-list" });
+  const close = button("Close", () => dialog.close(), "secondary");
+  const retry = button("Retry", () => {
+    close.focus();
+    void loadPlayers();
+  }, "secondary");
+  const manage = element("a", {
+    class: "button secondary",
+    href: "/admin/availability?fixture=" + fixtureId,
+  }, "Manage availability");
+
+  async function loadPlayers() {
+    retry.hidden = true;
+    message.removeAttribute("data-error");
+    message.textContent = "Loading availability…";
+    try {
+      const roster = await getFixtureRoster(fixtureId);
+      const available = roster.filter((player) => player.available === true);
+      if (!available.length) {
+        message.textContent = "No players are marked available for this fixture.";
+        return;
+      }
+      const duplicates = duplicateLabels(roster, (player) => player.name);
+      players.replaceChildren(...available.map(({ player_id, name }) =>
+        element("li", {}, labelFor({ id: player_id }, name, duplicates))));
+      message.textContent = available.length === 1
+        ? "1 player available."
+        : available.length + " players available.";
+    } catch (error) {
+      message.setAttribute("data-error", "");
+      message.textContent = error.message;
+      retry.hidden = false;
+    }
+  }
+
+  dialog.querySelector("#dialog-title").textContent = "Available players";
+  dialog.querySelector("#dialog-content").replaceChildren(
+    element("p", { class: "detail" }, fixtureName),
+    message, players, element("div", { class: "actions" }, close, manage, retry),
+  );
+  dialog.oncancel = null;
+  void loadPlayers();
+  dialog.showModal();
+  close.focus();
+}
+
 const playerFields = [
   { name: "name", label: "Name", type: "text", required: true },
   { name: "rating", label: "Rating", type: "number", min: 1, max: 6, step: 0.5, required: true },
@@ -126,7 +180,9 @@ function recordPage(isPlayers) {
     }
     const duplicates = duplicateLabels(records, name);
     const panel = element("div", { class: "panel" });
-    for (const record of records) {
+    const displayed = isRatings ? [...records].sort((left, right) =>
+      right.rating - left.rating || left.name.localeCompare(right.name) || left.id - right.id) : records;
+    for (const record of displayed) {
       const displayName = labelFor(record, name(record), duplicates);
       const description = isPlayers
         ? "Rating " + Number(record.rating).toFixed(1) + (record.can_play_goalkeeper ? " · Goalkeeper eligible" : "")
@@ -136,10 +192,18 @@ function recordPage(isPlayers) {
       const remove = button("Delete", () => confirmDelete(record, displayName), "secondary");
       edit.setAttribute("aria-label", "Edit " + displayName);
       remove.setAttribute("aria-label", "Delete " + displayName);
+      const actions = element("div", { class: "actions" }, edit, remove);
+      if (!isPlayers) {
+        const view = button("View", () => viewFixtureAvailability(record.id, displayName), "secondary");
+        view.setAttribute("aria-label", "View availability for " + displayName);
+        actions.prepend(view);
+      }
       panel.append(element("article", { class: "row record" },
-        element("div", {}, element("div", { class: "record-name" }, isPlayers ? displayName : record.opponent),
-          element("p", { class: "detail" }, description)),
-        element("div", { class: "actions" }, edit, remove),
+        element("div", { class: "record-summary" },
+          element("span", { class: "record-icon" }, icon(isPlayers ? "user-round" : "calendar-days")),
+          element("div", {}, element("div", { class: "record-name" }, isPlayers ? displayName : record.opponent),
+            element("p", { class: "detail" }, description))),
+        actions,
       ));
     }
     list.append(panel);
@@ -330,7 +394,7 @@ function recordPage(isPlayers) {
     cancel.focus();
   }
 
-  newRecord.textContent = "Add " + noun;
+  newRecord.replaceChildren(icon("plus"), "Add " + noun);
   newRecord.addEventListener("click", () => openEditor());
   newRecord.hidden = false;
   newRecord.disabled = true;
@@ -417,7 +481,7 @@ function availabilityPage() {
   }
 
   function rosterForFixture(selected) {
-    if (selected) return request("/fixtures/" + selected + "/availability").then((data) => data.players);
+    if (selected) return getFixtureRoster(selected);
     return request("/players").then((players) => players.map((player) => ({
       player_id: player.id, name: player.name, available: null,
     })));
@@ -476,7 +540,10 @@ function availabilityPage() {
   document.addEventListener("click", (event) => {
     const destination = event.target.closest("a[href]");
     const target = destination && new URL(destination.href).pathname;
-    if (!["/admin/players", "/admin/fixtures"].includes(target)) return;
+    const sidebarLink = destination?.matches(".brand, .sidebar nav a");
+    if (!sidebarLink && !["/admin/players", "/admin/fixtures"].includes(target)) {
+      return;
+    }
     if (saving || !canDiscard()) event.preventDefault();
   });
 
@@ -586,9 +653,17 @@ function availabilityPage() {
   void initialise(new URL(location.href).searchParams.get("fixture"));
 }
 
-const titles = { players: "Players", fixtures: "Fixtures", availability: "Availability" };
-title.textContent = titles[page];
-document.title = titles[page] + " · Football Assistant";
-document.querySelector('nav [href="/admin/' + page + '"]').setAttribute("aria-current", "page");
+const descriptions = {
+  players: "Manage your squad, player ratings and goalkeeper eligibility.",
+  fixtures: "Manage match dates, opponents, and home or away designations.",
+  availability: "Choose a fixture and record who can play.",
+  ratings: "Review and edit squad ratings, ordered highest first.",
+};
+const currentPage = isRatings ? "ratings" : page;
+title.textContent = pages[currentPage].label;
+document.title = title.textContent + " · Football Assistant";
+document.querySelector(".page-heading").prepend(icon(pages[currentPage].icon));
+document.querySelector("#page-description").textContent = descriptions[currentPage];
+renderSidebar(currentPage);
 if (page === "availability") availabilityPage();
 else recordPage(page === "players");

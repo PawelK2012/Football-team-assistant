@@ -21,8 +21,31 @@ def test_admin_serves_pages_and_assets() -> None:
             assert response.status_code == 200
             assert response.headers["cache-control"] == "no-store"
             assert "/admin/static/admin.js" in response.text
+            assert 'class="brand" href="http://127.0.0.1:8001/chat"' in response.text
+            assert "/assets/clipboard.png" in response.text
+            assert "/assets/favicon.png" in response.text
+            assert "/assets/trinity-donaghmede-fc.png" in response.text
+            assert "/assets/ui.css" in response.text
         for asset in ("admin.css", "admin.js"):
             assert client.get(f"/admin/static/{asset}").status_code == 200
+        logo = client.get("/admin/static/football-assistant.png")
+        assert logo.headers["content-type"] == "image/png"
+        assert logo.content.startswith(b"\x89PNG\r\n\x1a\n")
+        for asset in (
+            "clipboard.png",
+            "favicon.png",
+            "trinity-donaghmede-fc.png",
+            "ui.css",
+            "shell.js",
+            "icons.svg",
+            "inter-variable.woff2",
+        ):
+            assert client.get(f"/assets/{asset}").status_code == 200
+        stylesheet = client.get("/assets/ui.css")
+        assert 'url("tactics-wallpaper.png")' in stylesheet.text
+        wallpaper = client.get("/admin/static/tactics-wallpaper.png")
+        assert wallpaper.headers["content-type"] == "image/png"
+        assert wallpaper.content.startswith(b"\x89PNG\r\n\x1a\n")
 
 
 def test_admin_requires_local_peer_host_and_write_origin() -> None:
@@ -30,6 +53,7 @@ def test_admin_requires_local_peer_host_and_write_origin() -> None:
         assert client.get("/admin/players").status_code == 403
     with browser() as client:
         assert client.get("/admin/players", headers={"Host": "other:8002"}).status_code == 403
+        assert client.get("/assets/ui.css", headers={"Host": "other:8002"}).status_code == 403
         duplicate = [("Host", "127.0.0.1:8002"), ("Host", "127.0.0.1:8002")]
         assert client.get("/admin/players", headers=duplicate).status_code == 403
         foreign_origin = {"Origin": "https://example.invalid"}
@@ -50,6 +74,15 @@ def test_admin_lists_preserve_empty_results(monkeypatch: pytest.MonkeyPatch) -> 
 
 def test_availability_returns_roster_and_persists_a_batch(monkeypatch: pytest.MonkeyPatch) -> None:
     changes = [{"player_id": 2, "available": True}, {"player_id": 5, "available": False}]
+    roster = [
+        {"player_id": 2, "name": "Available player", "available": True},
+        {"player_id": 5, "name": "Unavailable player", "available": False},
+        {"player_id": 8, "name": "Unconfirmed player", "available": None},
+    ]
+
+    def get_roster(fixture_id: int) -> list[dict[str, int | str | bool | None]]:
+        assert fixture_id == 8
+        return roster
 
     def save(
         fixture_id: int, batch: admin_service.AvailabilityBatch
@@ -62,14 +95,14 @@ def test_availability_returns_roster_and_persists_a_batch(monkeypatch: pytest.Mo
     monkeypatch.setattr(
         admin_service,
         "get_availability",
-        lambda fixture_id: [{"player_id": fixture_id, "name": "Test", "available": None}],
+        get_roster,
         raising=False,
     )
     with browser() as client:
         url = "/admin/api/fixtures/8/availability"
         assert client.get(url).json() == {
             "fixture_id": 8,
-            "players": [{"player_id": 8, "name": "Test", "available": None}],
+            "players": roster,
         }
         assert client.put(url, headers=ORIGIN, json={"changes": changes}).json() == {
             "fixture_id": 8,

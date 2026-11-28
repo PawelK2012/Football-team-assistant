@@ -1,5 +1,8 @@
 ### Football team assistant
 
+Run `make web` to start both [chat](http://127.0.0.1:8001/chat) and the
+[admin panel](http://127.0.0.1:8002/admin). Press Ctrl+C to stop both.
+
 ## Browser chat
 
 Start local Ollama with `qwen3:8b` available and set `DATABASE_URL` for your running

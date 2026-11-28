@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi import Path as PathParameter
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 from psycopg.rows import DictRow
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
@@ -32,6 +33,7 @@ app = FastAPI(
     openapi_url=None,
     redirect_slashes=False,
 )
+app.mount("/assets", StaticFiles(directory=STATIC.parents[1] / "static"), name="assets")
 
 
 def failure(
@@ -116,6 +118,20 @@ async def stylesheet() -> FileResponse:
 @app.get("/admin/static/admin.js")
 async def javascript() -> FileResponse:
     return FileResponse(STATIC / "admin.js", media_type="text/javascript")
+
+
+@app.get("/admin/static/football-assistant.png")
+async def brand_icon() -> FileResponse:
+    return FileResponse(
+        STATIC.parents[1] / "static" / "football-assistant.png", media_type="image/png"
+    )
+
+
+@app.get("/admin/static/tactics-wallpaper.png")
+async def tactics_wallpaper() -> FileResponse:
+    return FileResponse(
+        STATIC.parents[1] / "static" / "tactics-wallpaper.png", media_type="image/png"
+    )
 
 
 class PlayerRecord(BaseModel):

@@ -22,6 +22,14 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
+"football_team_assistant" = [
+    "static/*.png",
+    "static/*.css",
+    "static/*.js",
+    "static/*.svg",
+    "static/*.woff2",
+    "static/*.txt",
+]
 "football_team_assistant.web_chat" = ["static/*.html", "static/*.css", "static/*.js"]
 "football_team_assistant.web_admin" = ["static/*.html", "static/*.css", "static/*.js"]
 
